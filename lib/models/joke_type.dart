@@ -1,0 +1,4 @@
+enum JokeType{
+  image,
+  text
+}
