@@ -3,6 +3,8 @@ import 'dart:collection';
 import 'package:flutter/material.dart';
 import 'package:sitcom_joke_app/bloc/bloc_provider.dart';
 import 'package:sitcom_joke_app/models/ImageJoke.dart';
+import 'package:sitcom_joke_app/models/joke_type.dart';
+import 'package:sitcom_joke_app/models/load_status.dart';
 import 'package:sitcom_joke_app/models/movie.dart';
 
 class ImageList extends StatefulWidget {
@@ -15,25 +17,69 @@ class ImageList extends StatefulWidget {
 
 class _ImageListState extends State<ImageList> {
 
+  int currentPage = 1;
+  bool inLoadMore = false;
+
 
   @override
-  Widget build(BuildContext context) {
-  final movieBloc = BlocProvider.of(context).movieBloc;
+   Widget build(BuildContext context) {
+    final movieBloc = BlocProvider.of(context).movieBloc;
 
-    return StreamBuilder<UnmodifiableListView<ImageJoke>>(
+    return StreamBuilder<LoadStatus>(
+       initialData: LoadStatus.loading,
+      stream: movieBloc.imageLoadStatus,
+      builder: (context, loadSnapshot) {
+
+        if(loadSnapshot.data == LoadStatus.loadedMore){
+          inLoadMore = false;
+        }else if(loadSnapshot.data == LoadStatus.loading){
+          return CircularProgressIndicator();
+        }
+
+        return StreamBuilder<UnmodifiableListView<ImageJoke>>(
               initialData: UnmodifiableListView<ImageJoke>([]),
               stream: movieBloc.imageJokes,
               builder: (context, imageJokesSnapshot) {
 
                 final imageJokes = imageJokesSnapshot.data;
-                return GridView.builder(
+                if(loadSnapshot.data == LoadStatus.loaded && currentPage == 1 && imageJokes.isEmpty){
+                  return Center(child: Text('No items found at the moment'),);
+                }
+
+                return ListView.builder(
                     itemCount: imageJokes.length,
-                    gridDelegate: new SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2),
                     itemBuilder: (context, index){
-                        return Text(imageJokes[index].title);
+                        if (index >= imageJokes.length - 3 && !inLoadMore) {
+                              currentPage++;
+                              inLoadMore = true;
+                              movieBloc.getJokes(currentPage, JokeType.image, widget.selectedMovie);
+                        } 
+                        return Container(
+                          height: 180.0,
+                          child: Text(imageJokes[index].title + '  '+imageJokes[index].url));
                     },
                 );
               }
     );
+      });
   }
+  // Widget build(BuildContext context) {
+  // final movieBloc = BlocProvider.of(context).movieBloc;
+
+  //   return StreamBuilder<UnmodifiableListView<ImageJoke>>(
+  //             initialData: UnmodifiableListView<ImageJoke>([]),
+  //             stream: movieBloc.imageJokes,
+  //             builder: (context, imageJokesSnapshot) {
+
+  //               final imageJokes = imageJokesSnapshot.data;
+  //               return GridView.builder(
+  //                   itemCount: imageJokes.length,
+  //                   gridDelegate: new SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2),
+  //                   itemBuilder: (context, index){
+  //                       return Text(imageJokes[index].title);
+  //                   },
+  //               );
+  //             }
+  //   );
+  // }
 }
