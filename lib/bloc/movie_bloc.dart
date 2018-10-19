@@ -6,6 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:sitcom_joke_app/models/ImageJoke.dart';
 import 'package:sitcom_joke_app/models/TextJoke.dart';
 import 'package:sitcom_joke_app/models/joke_type.dart';
+import 'package:sitcom_joke_app/models/load_status.dart';
 import 'package:sitcom_joke_app/models/movie.dart';
 
 class MovieBloc{
@@ -29,11 +30,17 @@ DocumentSnapshot _lastTextJoke;
       seedValue: UnmodifiableListView([]));
   final _getJokesSubject = BehaviorSubject<Map>(
   seedValue: null);
+  final _imageLoadStatusSubject = BehaviorSubject<LoadStatus>(seedValue: LoadStatus.loading);
+  final _textLoadStatusSubject = BehaviorSubject<LoadStatus>(seedValue: LoadStatus.loading);
+
+
   void Function(int, JokeType, Movie) get getJokes => (currentPage, jokeType, movie) => _getJokesSubject.sink.add({'currentPage':currentPage, 'jokeType':jokeType, 'movie': movie}); 
 
   Stream<UnmodifiableListView<Movie>> get movies => _moviesSubject.stream;
   Stream<UnmodifiableListView<ImageJoke>> get imageJokes => _imageJokesSubject.stream;
   Stream<UnmodifiableListView<TextJoke>> get textJokes => _textJokesSubject.stream;
+  Stream<LoadStatus> get imageLoadStatus => _imageLoadStatusSubject.stream;
+  Stream<LoadStatus> get textLoadStatus => _textLoadStatusSubject.stream;
 
 
 
@@ -51,12 +58,31 @@ DocumentSnapshot _lastTextJoke;
               Query jokesQuery  = Firestore.instance.collection('jokes').document(jokePath).collection('content').orderBy('title');
 
               if(currentPage > 1){
-                    jokesQuery = jokesQuery.startAfter((jokeType == JokeType.image) ?_lastImageJoke['title'] : _lastTextJoke['title']);
+                    jokesQuery = jokesQuery.startAfter((jokeType == JokeType.image) ?[_lastImageJoke['title']] : [_lastTextJoke['title']]);
+                    if(jokeType == JokeType.image){
+                        _imageLoadStatusSubject.sink.add(LoadStatus.loadingMore);
+                    }else if(jokeType == JokeType.text){
+                        _textLoadStatusSubject.sink.add(LoadStatus.loadingMore);
+
+                    }
+              }else{
+                if(jokeType == JokeType.image){
+                        _imageLoadStatusSubject.sink.add(LoadStatus.loading);
+                }else if(jokeType == JokeType.text){
+                        _textLoadStatusSubject.sink.add(LoadStatus.loading);
+                }
               }
 
-              jokesQuery.limit(5).snapshots().listen((jokes){
+              if(movie != null){
+                jokesQuery = jokesQuery.where('movie', isEqualTo: movie.id);
+              }
 
-                  if(jokeType == JokeType.image){
+              jokesQuery.limit(4).snapshots().listen((jokes){
+
+                 if(jokes.documents.isNotEmpty){
+                     if(jokeType == JokeType.image){
+
+                      _lastImageJoke = jokes.documents[jokes.documents.length-1];
 
                       final gottenImageJokes = jokes.documents.map((joke){
                         Map jokeData = joke.data;
@@ -69,6 +95,8 @@ DocumentSnapshot _lastTextJoke;
                       _imageJokesSubject.sink.add(UnmodifiableListView(_imageJokes));
                   }else if(jokeType == JokeType.text){
 
+                      _lastTextJoke = jokes.documents[jokes.documents.length-1];
+
                       final gottenTextJokes = jokes.documents.map((joke){
                         Map jokeData = joke.data;
                         jokeData['id'] = joke.documentID;
@@ -80,11 +108,37 @@ DocumentSnapshot _lastTextJoke;
                      // _textJokes = (currentPage == 1)? gottenTextJokes : _textJokes..addAll(gottenTextJokes);
                      if(currentPage == 1){
                         _textJokes = gottenTextJokes;
+                         if(jokeType == JokeType.image){
+                                  _imageLoadStatusSubject.sink.add(LoadStatus.loaded);
+                          }else if(jokeType == JokeType.text){
+                                  _textLoadStatusSubject.sink.add(LoadStatus.loaded);
+                          }
                      }else{
                         _textJokes.addAll(gottenTextJokes);
+                        //TODO: put this in a function setLoadStatus(type, status)
+                         if(jokeType == JokeType.image){
+                             _imageLoadStatusSubject.sink.add(LoadStatus.loadedMore);
+                         }else if(jokeType == JokeType.text){
+                                  _textLoadStatusSubject.sink.add(LoadStatus.loadedMore); 
+                         }
                      }
                       _textJokesSubject.sink.add(UnmodifiableListView(_textJokes));
                   }
+                 }else{
+                  //  if(currentPage == 1){
+                  //     if(jokeType == JokeType.image){
+                  //                   _imageLoadStatusSubject.sink.add(LoadStatus.loadedEmpty); //can be done by checking currentPage and loaded in the list side
+                  //     }else if(jokeType == JokeType.text){
+                  //                   _textLoadStatusSubject.sink.add(LoadStatus.loadedEmpty);
+                  //     }
+                  //  }else{
+                    if(jokeType == JokeType.image){
+                                    _imageLoadStatusSubject.sink.add(LoadStatus.loadEnd);
+                      }else if(jokeType == JokeType.text){
+                                    _textLoadStatusSubject.sink.add(LoadStatus.loadEnd);
+                      }
+                  // }
+                 }
               });
       });
 
@@ -102,21 +156,10 @@ DocumentSnapshot _lastTextJoke;
         // ];
 
         Firestore.instance.collection('movies').snapshots().listen((data){
-          List<Movie> movies = data.documents.map((doc) => Movie(name: doc['name'] , description: doc['description'])).toList();
+          List<Movie> movies = data.documents.map((doc) => Movie(id: doc.documentID, name: doc['name'] , description: doc['description'])).toList();
           _movies.addAll(movies);
           _moviesSubject.sink.add(UnmodifiableListView(_movies));
         });
-
-        // Firestore.instance.collection('jokes').document('image_jokes').collection('content').limit(3).snapshots().listen((imageJokes){
-
-        //       print("This is the joke part");
-        //       dynamic fil = imageJokes.documents[1];
-        //       Firestore.instance.collection('jokes').document('image_jokes').collection('content').orderBy('title').startAfter([fil['title']]).snapshots().listen((nes){
-
-        //          print("This is the joke part");
-
-        //       });
-        // });
         
   }
 
@@ -195,5 +238,7 @@ DocumentSnapshot _lastTextJoke;
     _imageJokesSubject.close();
     _textJokesSubject.close();
     _getJokesSubject.close();
+    _imageLoadStatusSubject.close();
+    _textLoadStatusSubject.close();
   }
 }

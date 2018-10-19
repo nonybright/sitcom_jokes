@@ -30,6 +30,7 @@ Movie _selectedMovie;
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(title: Text('ss'),),
       drawer:  AppDrawer(onMovieClicked: (movie){
         print('movie clicked');
         BlocProvider.of(context).movieBloc.getJokes(1, JokeType.text, movie);
@@ -37,52 +38,8 @@ Movie _selectedMovie;
               _selectedMovie = movie;
         });
       },),
-      body: DefaultTabController(
-        length: 2,
-        child: NestedScrollView(
-          headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
-            return <Widget>[
-              SliverAppBar(
-                expandedHeight: 200.0,
-                floating: false,
-                pinned: true,
-                flexibleSpace: FlexibleSpaceBar(
-                    centerTitle: true,
-                    title: Text((_selectedMovie != null)? _selectedMovie.name: "Sitcom Jokes",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16.0,
-                        )),
-                    background: Image.network(
-                      "https://images.pexels.com/photos/396547/pexels-photo-396547.jpeg?auto=compress&cs=tinysrgb&h=350",
-                      fit: BoxFit.cover,
-                    )),
-              ),
-              SliverPersistentHeader(
-                delegate: _SliverAppBarDelegate(
-                  TabBar(
-                    labelColor: Colors.black87,
-                    unselectedLabelColor: Colors.grey,
-                    controller: _tabController,
-                    tabs: [
-                      Tab(icon: Icon(Icons.info), text: "Images"),
-                      Tab(icon: Icon(Icons.lightbulb_outline), text: "Texts"),
-                    ],
-                  ),
-                ),
-                pinned: true,
-              ),
-            ];
-          },
-          body: TabBarView(
-            controller: _tabController,
-            children: [
-             ImageList(),
-             TextList(),
-            ],
-          ),
-        ),
-      ),
+     body:TextList(selectedMovie: _selectedMovie),
+
 );
   }
 }

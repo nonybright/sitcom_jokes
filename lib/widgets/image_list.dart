@@ -3,9 +3,11 @@ import 'dart:collection';
 import 'package:flutter/material.dart';
 import 'package:sitcom_joke_app/bloc/bloc_provider.dart';
 import 'package:sitcom_joke_app/models/ImageJoke.dart';
+import 'package:sitcom_joke_app/models/movie.dart';
 
 class ImageList extends StatefulWidget {
-  ImageList({Key key}) : super(key: key);
+  final Movie selectedMovie;
+  ImageList({Key key, this.selectedMovie}) : super(key: key);
 
   @override
   _ImageListState createState() => new _ImageListState();

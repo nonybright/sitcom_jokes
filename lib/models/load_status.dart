@@ -1,5 +1,10 @@
 enum LoadStatus{
   loading,
+  loadingMore,
   loaded,
-  error
+  loadedMore,
+  loadedEmpty,
+  loadEnd,
+  error,
+  errorMore
 }
