@@ -20,6 +20,10 @@ DocumentSnapshot _lastImageJoke;
 DocumentSnapshot _lastTextJoke;
 
 
+int _currentImagePage  = 1;
+int _currentTextPage = 1;
+
+
 
   
   final _moviesSubject = BehaviorSubject<UnmodifiableListView<Movie>>(
@@ -32,27 +36,38 @@ DocumentSnapshot _lastTextJoke;
   seedValue: null);
   final _imageLoadStatusSubject = BehaviorSubject<LoadStatus>(seedValue: LoadStatus.loading);
   final _textLoadStatusSubject = BehaviorSubject<LoadStatus>(seedValue: LoadStatus.loading);
+  final _selectedMovieSubject = BehaviorSubject<Movie>(seedValue: null);
 
 
-  void Function(int, JokeType, Movie) get getJokes => (currentPage, jokeType, movie) => _getJokesSubject.sink.add({'currentPage':currentPage, 'jokeType':jokeType, 'movie': movie}); 
+  void Function(JokeType) get getJokes => (jokeType) => _getJokesSubject.sink.add({'jokeType':jokeType}); 
 
   Stream<UnmodifiableListView<Movie>> get movies => _moviesSubject.stream;
   Stream<UnmodifiableListView<ImageJoke>> get imageJokes => _imageJokesSubject.stream;
   Stream<UnmodifiableListView<TextJoke>> get textJokes => _textJokesSubject.stream;
   Stream<LoadStatus> get imageLoadStatus => _imageLoadStatusSubject.stream;
   Stream<LoadStatus> get textLoadStatus => _textLoadStatusSubject.stream;
+  Stream<Movie> get selectedMovie => _selectedMovieSubject.stream;
 
 
+  //sink
+  Function(Movie) get changeSelectedMovie => (movie){  
+                                            _currentImagePage = 1;
+                                            _currentTextPage = 1;
+                                            _lastImageJoke = null;
+                                            _lastTextJoke = null;
+                                            return _selectedMovieSubject.sink.add(movie);};
 
+  
   MovieBloc(){
 
     _loadAllMovies();
 
-
-      _getJokesSubject.stream.listen((Map map){
-
-              int currentPage = map['currentPage'];
+      _getJokesSubject.stream.withLatestFrom(_selectedMovieSubject.stream, (Map map, Movie selectedMovie){
+            map['movie'] = selectedMovie;
+            return map;
+      }).listen((Map map){
               JokeType jokeType = map['jokeType'];
+              int currentPage = (jokeType == JokeType.image)? _currentImagePage : _currentTextPage;
               Movie movie = map['movie'];
               String jokePath = (jokeType == JokeType.image) ? 'image_jokes' : 'text_jokes';
               Query jokesQuery  = Firestore.instance.collection('jokes').document(jokePath).collection('content').orderBy('title');
@@ -77,7 +92,9 @@ DocumentSnapshot _lastTextJoke;
                 jokesQuery = jokesQuery.where('movie', isEqualTo: movie.id);
               }
 
-              jokesQuery.limit(4).snapshots().listen((jokes){
+              jokesQuery.limit(4).snapshots().listen((jokes) async {
+
+                //await Future.delayed(Duration(seconds: 3));
 
                  if(jokes.documents.isNotEmpty){
                      if(jokeType == JokeType.image){
@@ -110,8 +127,10 @@ DocumentSnapshot _lastTextJoke;
                         _textJokes = gottenTextJokes;
                          if(jokeType == JokeType.image){
                                   _imageLoadStatusSubject.sink.add(LoadStatus.loaded);
+                                  _currentImagePage++;
                           }else if(jokeType == JokeType.text){
                                   _textLoadStatusSubject.sink.add(LoadStatus.loaded);
+                                  _currentTextPage++;
                           }
                      }else{
                         _textJokes.addAll(gottenTextJokes);
@@ -240,5 +259,6 @@ DocumentSnapshot _lastTextJoke;
     _getJokesSubject.close();
     _imageLoadStatusSubject.close();
     _textLoadStatusSubject.close();
+    _selectedMovieSubject.close();
   }
 }
