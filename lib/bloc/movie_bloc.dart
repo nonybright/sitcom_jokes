@@ -4,223 +4,385 @@ import 'dart:collection';
 import 'package:rxdart/rxdart.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:sitcom_joke_app/models/ImageJoke.dart';
+import 'package:sitcom_joke_app/models/Joke.dart';
 import 'package:sitcom_joke_app/models/TextJoke.dart';
 import 'package:sitcom_joke_app/models/joke_type.dart';
 import 'package:sitcom_joke_app/models/load_status.dart';
 import 'package:sitcom_joke_app/models/movie.dart';
 
-class MovieBloc{
+class MovieBloc {
+  List<Movie> _movies = [];
+  Map<String, Movie> movieCache = {};
 
-List<Movie> _movies = [];
+  List<ImageJoke> _imageJokes = [];
+  List<TextJoke> _textJokes = [];
 
-List<ImageJoke> _imageJokes = [];
-List<TextJoke> _textJokes = [];
+  DocumentSnapshot _lastImageJoke;
+  DocumentSnapshot _lastTextJoke;
 
-DocumentSnapshot _lastImageJoke;
-DocumentSnapshot _lastTextJoke;
+  int _currentImagePage = 1;
+  int _currentTextPage = 1;
 
-
-int _currentImagePage  = 1;
-int _currentTextPage = 1;
-
-
-
-  
   final _moviesSubject = BehaviorSubject<UnmodifiableListView<Movie>>(
       seedValue: UnmodifiableListView([]));
   final _imageJokesSubject = BehaviorSubject<UnmodifiableListView<ImageJoke>>(
       seedValue: UnmodifiableListView([]));
   final _textJokesSubject = BehaviorSubject<UnmodifiableListView<TextJoke>>(
       seedValue: UnmodifiableListView([]));
-  final _getJokesSubject = BehaviorSubject<Map>(
-  seedValue: null);
-  final _imageLoadStatusSubject = BehaviorSubject<LoadStatus>(seedValue: LoadStatus.loading);
-  final _textLoadStatusSubject = BehaviorSubject<LoadStatus>(seedValue: LoadStatus.loading);
+  final _getJokesSubject = BehaviorSubject<Map>(seedValue: null);
+  final _imageLoadStatusSubject =
+      BehaviorSubject<LoadStatus>(seedValue: LoadStatus.loading);
+  final _textLoadStatusSubject =
+      BehaviorSubject<LoadStatus>(seedValue: LoadStatus.loading);
   final _selectedMovieSubject = BehaviorSubject<Movie>(seedValue: null);
 
-
-  void Function(JokeType) get getJokes => (jokeType) => _getJokesSubject.sink.add({'jokeType':jokeType}); 
+  void Function(JokeType) get getJokes =>
+      (jokeType) => _getJokesSubject.sink.add({'jokeType': jokeType});
 
   Stream<UnmodifiableListView<Movie>> get movies => _moviesSubject.stream;
-  Stream<UnmodifiableListView<ImageJoke>> get imageJokes => _imageJokesSubject.stream;
-  Stream<UnmodifiableListView<TextJoke>> get textJokes => _textJokesSubject.stream;
+  Stream<UnmodifiableListView<ImageJoke>> get imageJokes =>
+      _imageJokesSubject.stream;
+  Stream<UnmodifiableListView<TextJoke>> get textJokes =>
+      _textJokesSubject.stream;
   Stream<LoadStatus> get imageLoadStatus => _imageLoadStatusSubject.stream;
   Stream<LoadStatus> get textLoadStatus => _textLoadStatusSubject.stream;
   Stream<Movie> get selectedMovie => _selectedMovieSubject.stream;
 
-
   //sink
-  Function(Movie) get changeSelectedMovie => (movie){  
-                                            _currentImagePage = 1;
-                                            _currentTextPage = 1;
-                                            _lastImageJoke = null;
-                                            _lastTextJoke = null;
-                                            return _selectedMovieSubject.sink.add(movie);};
+  Function(Movie) get changeSelectedMovie => (movie) {
+        _currentImagePage = 1;
+        _currentTextPage = 1;
+        _lastImageJoke = null;
+        _lastTextJoke = null;
+        return _selectedMovieSubject.sink.add(movie);
+      };
 
-  
-  MovieBloc(){
-
+  MovieBloc() {
     _loadAllMovies();
 
-      _getJokesSubject.stream.withLatestFrom(_selectedMovieSubject.stream, (Map map, Movie selectedMovie){
-            map['movie'] = selectedMovie;
-            return map;
-      }).listen((Map map){
-              JokeType jokeType = map['jokeType'];
-              int currentPage = (jokeType == JokeType.image)? _currentImagePage : _currentTextPage;
-              Movie movie = map['movie'];
-              String jokePath = (jokeType == JokeType.image) ? 'image_jokes' : 'text_jokes';
-              Query jokesQuery  = Firestore.instance.collection('jokes').document(jokePath).collection('content').orderBy('title');
+    _getJokesSubject.stream.withLatestFrom(_selectedMovieSubject.stream,
+        (Map map, Movie selectedMovie) {
+      map['movie'] = selectedMovie;
+      return map;
+    }).listen((Map map) {
+      JokeType jokeType = map['jokeType'];
+      int currentPage =
+          (jokeType == JokeType.image) ? _currentImagePage : _currentTextPage;
+      Movie movie = map['movie'];
+      String jokePath =
+          (jokeType == JokeType.image) ? 'image_jokes' : 'text_jokes';
+      Query jokesQuery = Firestore.instance
+          .collection('jokes')
+          .document(jokePath)
+          .collection('content')
+          .orderBy('title');
 
-              if(currentPage > 1){
-                    jokesQuery = jokesQuery.startAfter((jokeType == JokeType.image) ?[_lastImageJoke['title']] : [_lastTextJoke['title']]);
-                    if(jokeType == JokeType.image){
-                        _imageLoadStatusSubject.sink.add(LoadStatus.loadingMore);
-                    }else if(jokeType == JokeType.text){
-                        _textLoadStatusSubject.sink.add(LoadStatus.loadingMore);
+      if (currentPage > 1) {
+        jokesQuery = jokesQuery.startAfter((jokeType == JokeType.image)
+            ? [_lastImageJoke['title']]
+            : [_lastTextJoke['title']]);
+        _setLoadStatusSubject(jokeType, LoadStatus.loadedMore);
+      } else {
+        _setLoadStatusSubject(jokeType, LoadStatus.loading);
+      }
 
-                    }
-              }else{
-                if(jokeType == JokeType.image){
-                        _imageLoadStatusSubject.sink.add(LoadStatus.loading);
-                }else if(jokeType == JokeType.text){
-                        _textLoadStatusSubject.sink.add(LoadStatus.loading);
-                }
-              }
+      if (movie != null) {
+        jokesQuery = jokesQuery.where('movie', isEqualTo: movie.id);
+      }
 
-              if(movie != null){
-                jokesQuery = jokesQuery.where('movie', isEqualTo: movie.id);
-              }
+      jokesQuery.limit(4).snapshots().listen((jokes) async {
+        if (jokes.documents.isNotEmpty) {
+          _setLastJoke(jokeType, jokes.documents[jokes.documents.length - 1]);
+          final gottenJokes = _createJokeList(jokes.documents, jokeType, movie);
+          if (currentPage == 1) {
+            _addJokes(gottenJokes, jokeType);
+            _updateJokeSubject(jokeType);
+            _setLoadStatusSubject(jokeType, LoadStatus.loaded);
+            _incrementPage(jokeType);
+          } else {
+            _addJokes(gottenJokes, jokeType, append: true);
+            _updateJokeSubject(
+                jokeType); //TODO: check if it prevents isEmpty text from appearing briefly
+            _setLoadStatusSubject(jokeType, LoadStatus.loadedMore);
+          }
+        } else {
+          //TODO: check if the list will show empty when previous items already exist and the movie type is changed. if it doesn't,
+          //uncomment the code below
 
-              jokesQuery.limit(4).snapshots().listen((jokes) async {
-
-                //await Future.delayed(Duration(seconds: 3));
-
-                 if(jokes.documents.isNotEmpty){
-                     if(jokeType == JokeType.image){
-
-                      _lastImageJoke = jokes.documents[jokes.documents.length-1];
-
-                      final gottenImageJokes = jokes.documents.map((joke){
-                        Map jokeData = joke.data;
-                        jokeData['id'] = joke.documentID;
-                        jokeData['movie'] = movie; //TODO:handle when movie is null
-                        return ImageJoke.fromMap(jokeData);
-                      }).toList();
-
-                      _imageJokes = (currentPage == 1) ? gottenImageJokes : _imageJokes..addAll(gottenImageJokes); 
-                      _imageJokesSubject.sink.add(UnmodifiableListView(_imageJokes));
-                  }else if(jokeType == JokeType.text){
-
-                      _lastTextJoke = jokes.documents[jokes.documents.length-1];
-
-                      final gottenTextJokes = jokes.documents.map((joke){
-                        Map jokeData = joke.data;
-                        jokeData['id'] = joke.documentID;
-                        jokeData['movie'] = movie;
-
-                        return TextJoke.fromMap(jokeData);
-
-                      }).toList();
-                     // _textJokes = (currentPage == 1)? gottenTextJokes : _textJokes..addAll(gottenTextJokes);
-                     if(currentPage == 1){
-                        _textJokes = gottenTextJokes;
-                         if(jokeType == JokeType.image){
-                                  _imageLoadStatusSubject.sink.add(LoadStatus.loaded);
-                                  _currentImagePage++;
-                          }else if(jokeType == JokeType.text){
-                                  _textLoadStatusSubject.sink.add(LoadStatus.loaded);
-                                  _currentTextPage++;
-                          }
-                     }else{
-                        _textJokes.addAll(gottenTextJokes);
-                        //TODO: put this in a function setLoadStatus(type, status)
-                         if(jokeType == JokeType.image){
-                             _imageLoadStatusSubject.sink.add(LoadStatus.loadedMore);
-                         }else if(jokeType == JokeType.text){
-                                  _textLoadStatusSubject.sink.add(LoadStatus.loadedMore); 
-                         }
-                     }
-                      _textJokesSubject.sink.add(UnmodifiableListView(_textJokes));
-                  }
-                 }else{
-                  //  if(currentPage == 1){
-                  //     if(jokeType == JokeType.image){
-                  //                   _imageLoadStatusSubject.sink.add(LoadStatus.loadedEmpty); //can be done by checking currentPage and loaded in the list side
-                  //     }else if(jokeType == JokeType.text){
-                  //                   _textLoadStatusSubject.sink.add(LoadStatus.loadedEmpty);
-                  //     }
-                  //  }else{
-                    if(jokeType == JokeType.image){
-                                    _imageLoadStatusSubject.sink.add(LoadStatus.loadEnd);
-                      }else if(jokeType == JokeType.text){
-                                    _textLoadStatusSubject.sink.add(LoadStatus.loadEnd);
-                      }
-                  // }
-                 }
-              });
+          //  if(currentPage == 1){
+          //    _addJokes([], jokeType);
+          //    _updateJokeSubject(jokeType);
+          //  }
+          _setLoadStatusSubject(jokeType, LoadStatus.loadEnd);
+        }
       });
-
+    });
   }
 
-  _loadAllMovies(){
+  _getMovieFromCache(String movieId){
 
-        // List<Movie> movies = [
-        //    Movie(id: '1', name: 'friends', description: 'i\'ll be there for you', seasons: 10, maxEpisodes: 24, dateStarted: null, dateEnded: null),
-        //    Movie(id: '2', name: 'himym', description: 'i\'ll be there for you', seasons: 10, maxEpisodes: 24, dateStarted: null, dateEnded: null),
-        //    Movie(id: '3', name: 'evry hates chris', description: 'i\'ll be there for you', seasons: 10, maxEpisodes: 24, dateStarted: null, dateEnded: null),
-        //    Movie(id: '4', name: 'bbt', description: 'i\'ll be there for you', seasons: 10, maxEpisodes: 24, dateStarted: null, dateEnded: null),
-        //    Movie(id: '5', name: 'my wife n kids', description: 'i\'ll be there for you', seasons: 10, maxEpisodes: 24, dateStarted: null, dateEnded: null),
-        //    Movie(id: '6', name: 'baby daddy', description: 'i\'ll be there for you', seasons: 10, maxEpisodes: 24, dateStarted: null, dateEnded: null)
-        // ];
-
-        Firestore.instance.collection('movies').snapshots().listen((data){
-          List<Movie> movies = data.documents.map((doc) => Movie(id: doc.documentID, name: doc['name'] , description: doc['description'])).toList();
-          _movies.addAll(movies);
-          _moviesSubject.sink.add(UnmodifiableListView(_movies));
-        });
-        
+      if(movieCache.containsKey(movieId)){
+        return movieCache[movieId];
+      }
+      return null;
   }
 
+  _getMovieFromList(String movieId){
+    return _movies.firstWhere((movie) => movie.id == movieId);
+  }
 
-  _addJokes(){
+  _setLastJoke(JokeType jokeType, joke) {
+    if (jokeType == JokeType.image) {
+      _lastImageJoke = joke;
+    } else {
+      _lastTextJoke = joke;
+    }
+  }
 
-      String friends = '9KfSaN86fI4plZHqURmX';
-      String himym = 'IHDbyYe2a8D9xhmZ1nkY';
+  _updateJokeSubject(JokeType jokeType) {
+    if (jokeType == JokeType.image) {
+      _imageJokesSubject.sink.add(UnmodifiableListView(_imageJokes));
+    } else {
+      _textJokesSubject.sink.add(UnmodifiableListView(_textJokes));
+    }
+  }
+
+  _addJokes(List<Joke> jokes, JokeType jokeType, {bool append = false}) {
+    if (jokeType == JokeType.image) {
+      List<ImageJoke> imageJokes = jokes.cast<ImageJoke>();
+     (!append) ? _imageJokes = jokes : _imageJokes.addAll(imageJokes); //check this
+    } else {
+      List<TextJoke> textJoke = jokes.cast<TextJoke>();
+      if(!append){
+        _textJokes = textJoke;
+      }else{
+      _textJokes.addAll(textJoke);
+      }
+    }
+  }
+
+  _createJokeList(
+      List<DocumentSnapshot> jokeDocuments, JokeType jokeType, Movie movie) {
+    List<dynamic> jokes =  jokeDocuments.map((joke) {
+      Map jokeData = joke.data;
+      jokeData['id'] = joke.documentID;
+
+      if(movie == null){
+       // movie = _getMovieFromCache(jokeData['movie']) || _getMovieFromList(jokeData['movie']);
+        movie = _getMovieFromCache(jokeData['movie']);
+        if(movie == null){
+            movie = _getMovieFromList(jokeData['movie']);
+        }
+      }
+      jokeData['movie'] = movie;
+
+      if (jokeType == JokeType.image) {
+        return ImageJoke.fromMap(jokeData); //TODO: handle if movie is null
+      } else {
+        return TextJoke.fromMap(jokeData);
+      }
+    }).toList();
+
+    return jokes;
+  }
+
+  _incrementPage(JokeType jokeType) {
+    if (jokeType == JokeType.image) {
+      _currentImagePage++;
+    } else if (jokeType == JokeType.text) {
+      _currentTextPage++;
+    }
+  }
+
+  _setLoadStatusSubject(JokeType jokeType, LoadStatus loadStatus) {
+    if (jokeType == JokeType.image) {
+      _imageLoadStatusSubject.sink.add(loadStatus);
+    } else if (jokeType == JokeType.text) {
+      _textLoadStatusSubject.sink.add(loadStatus);
+    }
+  }
+
+  _loadAllMovies() {
+    // List<Movie> movies = [
+    //    Movie(id: '1', name: 'friends', description: 'i\'ll be there for you', seasons: 10, maxEpisodes: 24, dateStarted: null, dateEnded: null),
+    //    Movie(id: '2', name: 'himym', description: 'i\'ll be there for you', seasons: 10, maxEpisodes: 24, dateStarted: null, dateEnded: null),
+    //    Movie(id: '3', name: 'evry hates chris', description: 'i\'ll be there for you', seasons: 10, maxEpisodes: 24, dateStarted: null, dateEnded: null),
+    //    Movie(id: '4', name: 'bbt', description: 'i\'ll be there for you', seasons: 10, maxEpisodes: 24, dateStarted: null, dateEnded: null),
+    //    Movie(id: '5', name: 'my wife n kids', description: 'i\'ll be there for you', seasons: 10, maxEpisodes: 24, dateStarted: null, dateEnded: null),
+    //    Movie(id: '6', name: 'baby daddy', description: 'i\'ll be there for you', seasons: 10, maxEpisodes: 24, dateStarted: null, dateEnded: null)
+    // ];
+
+    Firestore.instance.collection('movies').snapshots().listen((data) {
+      List<Movie> movies = data.documents
+          .map((doc) => Movie(
+              id: doc.documentID,
+              name: doc['name'],
+              description: doc['description']))
+          .toList();
+      _movies.addAll(movies);
+      _moviesSubject.sink.add(UnmodifiableListView(_movies));
+    });
+  }
+
+  _addJokesToServer() {
+    String friends = '9KfSaN86fI4plZHqURmX';
+    String himym = 'IHDbyYe2a8D9xhmZ1nkY';
 
     final textJokes = [
-
-        TextJoke(title: 'chan', text: 'knock knock', likes: 1, movie: Movie(id: friends), dateAdded: DateTime.now()),
-        TextJoke(title: 'ross', text: 'ros knock knock', likes: 1, movie: Movie(id: friends), dateAdded: DateTime.now()),
-        TextJoke(title: 'rach', text: 'knock knock', likes: 1, movie: Movie(id: friends), dateAdded: DateTime.now()),
-        TextJoke(title: 'joe', text: 'knock knock', likes: 1, movie: Movie(id: friends), dateAdded: DateTime.now()),
-        TextJoke(title: 'phoebe', text: 'dd knock knock', likes: 1, movie: Movie(id: friends), dateAdded: DateTime.now()),
-        TextJoke(title: 'jennis', text: 'jen hahaha knock knock', likes: 1, movie: Movie(id: friends), dateAdded: DateTime.now()),
-        TextJoke(title: '2chan', text: 'knock knock', likes: 1, movie: Movie(id: friends), dateAdded: DateTime.now()),
-        TextJoke(title: '2ross', text: 'ros knock knock', likes: 1, movie: Movie(id: friends), dateAdded: DateTime.now()),
-        TextJoke(title: '2rach', text: 'knock knock', likes: 1, movie: Movie(id: friends), dateAdded: DateTime.now()),
-        TextJoke(title: '2joe', text: 'knock knock', likes: 1, movie: Movie(id: friends), dateAdded: DateTime.now()),
-        TextJoke(title: '2phoebe', text: 'dd knock knock', likes: 1, movie: Movie(id: friends), dateAdded: DateTime.now()),
-        TextJoke(title: '2jennis', text: 'jen hahaha knock knock', likes: 1, movie: Movie(id: friends), dateAdded: DateTime.now()),
-        TextJoke(title: 'barney', text: 'legendary', likes: 1, movie: Movie(id: himym), dateAdded: DateTime.now()),
-        TextJoke(title: 'robin', text: 'ff legendary', likes: 1, movie: Movie(id: himym), dateAdded: DateTime.now()),
-        TextJoke(title: 'ted', text: ' rr legendary', likes: 1, movie: Movie(id: himym), dateAdded: DateTime.now()),
-        TextJoke(title: 'marshal', text: 'rrw legendary', likes: 1, movie: Movie(id: himym), dateAdded: DateTime.now()),
-        TextJoke(title: 'lily', text: ' rr legendary', likes: 1, movie: Movie(id: himym), dateAdded: DateTime.now()),
-        TextJoke(title: 'mother', text: 'legendary', likes: 1, movie: Movie(id: himym), dateAdded: DateTime.now()),
-        TextJoke(title: '2barney', text: 'legendary', likes: 1, movie: Movie(id: himym), dateAdded: DateTime.now()),
-        TextJoke(title: '2robin', text: 'ff legendary', likes: 1, movie: Movie(id: himym), dateAdded: DateTime.now()),
-        TextJoke(title: '2ted', text: ' rr legendary', likes: 1, movie: Movie(id: himym), dateAdded: DateTime.now()),
-        TextJoke(title: '2marshal', text: 'rrw legendary', likes: 1, movie: Movie(id: himym), dateAdded: DateTime.now()),
-        TextJoke(title: '2lily', text: ' rr legendary', likes: 1, movie: Movie(id: himym), dateAdded: DateTime.now()),
-        TextJoke(title: '2mother', text: 'legendary', likes: 1, movie: Movie(id: himym), dateAdded: DateTime.now()),
+      TextJoke(
+          title: 'chan',
+          text: 'knock knock',
+          likes: 1,
+          movie: Movie(id: friends),
+          dateAdded: DateTime.now()),
+      TextJoke(
+          title: 'ross',
+          text: 'ros knock knock',
+          likes: 1,
+          movie: Movie(id: friends),
+          dateAdded: DateTime.now()),
+      TextJoke(
+          title: 'rach',
+          text: 'knock knock',
+          likes: 1,
+          movie: Movie(id: friends),
+          dateAdded: DateTime.now()),
+      TextJoke(
+          title: 'joe',
+          text: 'knock knock',
+          likes: 1,
+          movie: Movie(id: friends),
+          dateAdded: DateTime.now()),
+      TextJoke(
+          title: 'phoebe',
+          text: 'dd knock knock',
+          likes: 1,
+          movie: Movie(id: friends),
+          dateAdded: DateTime.now()),
+      TextJoke(
+          title: 'jennis',
+          text: 'jen hahaha knock knock',
+          likes: 1,
+          movie: Movie(id: friends),
+          dateAdded: DateTime.now()),
+      TextJoke(
+          title: '2chan',
+          text: 'knock knock',
+          likes: 1,
+          movie: Movie(id: friends),
+          dateAdded: DateTime.now()),
+      TextJoke(
+          title: '2ross',
+          text: 'ros knock knock',
+          likes: 1,
+          movie: Movie(id: friends),
+          dateAdded: DateTime.now()),
+      TextJoke(
+          title: '2rach',
+          text: 'knock knock',
+          likes: 1,
+          movie: Movie(id: friends),
+          dateAdded: DateTime.now()),
+      TextJoke(
+          title: '2joe',
+          text: 'knock knock',
+          likes: 1,
+          movie: Movie(id: friends),
+          dateAdded: DateTime.now()),
+      TextJoke(
+          title: '2phoebe',
+          text: 'dd knock knock',
+          likes: 1,
+          movie: Movie(id: friends),
+          dateAdded: DateTime.now()),
+      TextJoke(
+          title: '2jennis',
+          text: 'jen hahaha knock knock',
+          likes: 1,
+          movie: Movie(id: friends),
+          dateAdded: DateTime.now()),
+      TextJoke(
+          title: 'barney',
+          text: 'legendary',
+          likes: 1,
+          movie: Movie(id: himym),
+          dateAdded: DateTime.now()),
+      TextJoke(
+          title: 'robin',
+          text: 'ff legendary',
+          likes: 1,
+          movie: Movie(id: himym),
+          dateAdded: DateTime.now()),
+      TextJoke(
+          title: 'ted',
+          text: ' rr legendary',
+          likes: 1,
+          movie: Movie(id: himym),
+          dateAdded: DateTime.now()),
+      TextJoke(
+          title: 'marshal',
+          text: 'rrw legendary',
+          likes: 1,
+          movie: Movie(id: himym),
+          dateAdded: DateTime.now()),
+      TextJoke(
+          title: 'lily',
+          text: ' rr legendary',
+          likes: 1,
+          movie: Movie(id: himym),
+          dateAdded: DateTime.now()),
+      TextJoke(
+          title: 'mother',
+          text: 'legendary',
+          likes: 1,
+          movie: Movie(id: himym),
+          dateAdded: DateTime.now()),
+      TextJoke(
+          title: '2barney',
+          text: 'legendary',
+          likes: 1,
+          movie: Movie(id: himym),
+          dateAdded: DateTime.now()),
+      TextJoke(
+          title: '2robin',
+          text: 'ff legendary',
+          likes: 1,
+          movie: Movie(id: himym),
+          dateAdded: DateTime.now()),
+      TextJoke(
+          title: '2ted',
+          text: ' rr legendary',
+          likes: 1,
+          movie: Movie(id: himym),
+          dateAdded: DateTime.now()),
+      TextJoke(
+          title: '2marshal',
+          text: 'rrw legendary',
+          likes: 1,
+          movie: Movie(id: himym),
+          dateAdded: DateTime.now()),
+      TextJoke(
+          title: '2lily',
+          text: ' rr legendary',
+          likes: 1,
+          movie: Movie(id: himym),
+          dateAdded: DateTime.now()),
+      TextJoke(
+          title: '2mother',
+          text: 'legendary',
+          likes: 1,
+          movie: Movie(id: himym),
+          dateAdded: DateTime.now()),
     ];
-    
 
-    textJokes.forEach((joke) async{
-          Map jokeMap = joke.toMap();
-          jokeMap.remove('id');
-          await Firestore.instance.collection('jokes').document('text_jokes').collection('content').add(jokeMap);
+    textJokes.forEach((joke) async {
+      Map jokeMap = joke.toMap();
+      jokeMap.remove('id');
+      await Firestore.instance
+          .collection('jokes')
+          .document('text_jokes')
+          .collection('content')
+          .add(jokeMap);
     });
     // Firestore.instance.collection('jokes').document('text_jokes').collection('content').add(data);
   }
@@ -248,11 +410,9 @@ int _currentTextPage = 1;
   //     _imageJokesSubject.sink.add(UnmodifiableListView(_imageJokes));
   //     _textJokesSubject.sink.add(UnmodifiableListView(_textJokes));
 
-
   // }
 
-
-  close(){
+  close() {
     _moviesSubject.close();
     _imageJokesSubject.close();
     _textJokesSubject.close();

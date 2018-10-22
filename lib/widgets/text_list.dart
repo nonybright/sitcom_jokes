@@ -47,11 +47,12 @@ class _TextListState extends State<TextList> {
                 if (loadSnapshot.data != LoadStatus.loadEnd &&
                     loadSnapshot.data != LoadStatus.loading &&
                     loadSnapshot.data != LoadStatus.loadingMore &&
-                    textJokes.isEmpty) {
+                    textJokes.isEmpty) { //TODO: try changing to == loadEnd and textJokes.isEmpty
                   return Center(
                     child: Text('No items found at the moment'),
                   );
                 }
+                
 
                 return ListView.builder(
                   itemCount: textJokes.length,
