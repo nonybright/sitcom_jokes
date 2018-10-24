@@ -44,15 +44,20 @@ class _TextListState extends State<TextList> {
               stream: movieBloc.textJokes,
               builder: (context, textJokesSnapshot) {
                 final textJokes = textJokesSnapshot.data;
-                if (loadSnapshot.data != LoadStatus.loadEnd &&
-                    loadSnapshot.data != LoadStatus.loading &&
-                    loadSnapshot.data != LoadStatus.loadingMore &&
-                    textJokes.isEmpty) { //TODO: try changing to == loadEnd and textJokes.isEmpty
+                // if (loadSnapshot.data != LoadStatus.loadEnd &&
+                //     loadSnapshot.data != LoadStatus.loading &&
+                //     loadSnapshot.data != LoadStatus.loadingMore &&
+                //     textJokes.isEmpty) { //TODO: try changing to == loadEnd and textJokes.isEmpty
+                //   return Center(
+                //     child: Text('No items found at the moment'),
+                //   );
+                // }
+                 if (loadSnapshot.data == LoadStatus.loadEnd &&
+                    textJokes.isEmpty) { 
                   return Center(
                     child: Text('No items found at the moment'),
                   );
                 }
-                
 
                 return ListView.builder(
                   itemCount: textJokes.length,

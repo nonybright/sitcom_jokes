@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sitcom_joke_app/bloc/bloc_provider.dart';
+import 'package:sitcom_joke_app/bloc/movie_bloc.dart';
 import 'package:sitcom_joke_app/models/joke_type.dart';
 import 'package:sitcom_joke_app/models/movie.dart';
 import 'package:sitcom_joke_app/widgets/app_drawer.dart';
@@ -29,11 +30,14 @@ Movie _selectedMovie;
 
   @override
   Widget build(BuildContext context) {
+    MovieBloc movieBloc = BlocProvider.of(context).movieBloc;
+
     return Scaffold(
       drawer:  AppDrawer(onMovieClicked: (movie){
         print('movie clicked');
-        BlocProvider.of(context).movieBloc.changeSelectedMovie(movie);
-        BlocProvider.of(context).movieBloc.getJokes(JokeType.text);
+        movieBloc.changeSelectedMovie(movie);
+        movieBloc.getJokes(JokeType.text);
+        movieBloc.getJokes(JokeType.image);
         setState(() {   
               _selectedMovie = movie;
         });

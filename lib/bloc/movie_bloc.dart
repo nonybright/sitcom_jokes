@@ -109,10 +109,10 @@ class MovieBloc {
           //TODO: check if the list will show empty when previous items already exist and the movie type is changed. if it doesn't,
           //uncomment the code below
 
-          //  if(currentPage == 1){
-          //    _addJokes([], jokeType);
-          //    _updateJokeSubject(jokeType);
-          //  }
+           if(currentPage == 1){
+             _addJokes([], jokeType);
+             _updateJokeSubject(jokeType);
+           }
           _setLoadStatusSubject(jokeType, LoadStatus.loadEnd);
         }
       });
@@ -150,7 +150,7 @@ class MovieBloc {
   _addJokes(List<Joke> jokes, JokeType jokeType, {bool append = false}) {
     if (jokeType == JokeType.image) {
       List<ImageJoke> imageJokes = jokes.cast<ImageJoke>();
-     (!append) ? _imageJokes = jokes : _imageJokes.addAll(imageJokes); //check this
+     (!append) ? _imageJokes = imageJokes : _imageJokes.addAll(imageJokes); //check this
     } else {
       List<TextJoke> textJoke = jokes.cast<TextJoke>();
       if(!append){
@@ -385,6 +385,47 @@ class MovieBloc {
           .add(jokeMap);
     });
     // Firestore.instance.collection('jokes').document('text_jokes').collection('content').add(data);
+  }
+
+
+  _addImageJokeToServer(){
+
+    String friends = '9KfSaN86fI4plZHqURmX';
+    String himym = 'IHDbyYe2a8D9xhmZ1nkY';
+
+    final jokeImageList = [
+
+        ImageJoke(title: '1chan', movie: Movie(id: friends), likes: 23, url: 'hello', dateAdded: DateTime.now()),
+        ImageJoke(title: '2chan', movie: Movie(id: friends), likes: 23, url: 'hello', dateAdded: DateTime.now()),
+        ImageJoke(title: '3chan', movie: Movie(id: friends), likes: 23, url: 'hello', dateAdded: DateTime.now()),
+        ImageJoke(title: '4chan', movie: Movie(id: friends), likes: 23, url: 'hello', dateAdded: DateTime.now()),
+        ImageJoke(title: '1ross', movie: Movie(id: friends), likes: 23, url: 'hello', dateAdded: DateTime.now()),
+        ImageJoke(title: '2ross', movie: Movie(id: friends), likes: 23, url: 'hello', dateAdded: DateTime.now()),
+        ImageJoke(title: '3ross', movie: Movie(id: friends), likes: 23, url: 'hello', dateAdded: DateTime.now()),
+        ImageJoke(title: '4ross', movie: Movie(id: friends), likes: 23, url: 'hello', dateAdded: DateTime.now()),
+        ImageJoke(title: '1mon', movie: Movie(id: friends), likes: 23, url: 'hello', dateAdded: DateTime.now()),
+        ImageJoke(title: '2mon', movie: Movie(id: friends), likes: 23, url: 'hello', dateAdded: DateTime.now()),
+        ImageJoke(title: '1ted', movie: Movie(id: himym), likes: 23, url: 'himym', dateAdded: DateTime.now()),
+        ImageJoke(title: '2ted', movie: Movie(id: himym), likes: 23, url: 'himym', dateAdded: DateTime.now()),
+        ImageJoke(title: '3ted', movie: Movie(id: himym), likes: 23, url: 'himym', dateAdded: DateTime.now()),
+        ImageJoke(title: '4ted', movie: Movie(id: himym), likes: 23, url: 'himym', dateAdded: DateTime.now()),
+        ImageJoke(title: '1ban', movie: Movie(id: himym), likes: 23, url: 'himym', dateAdded: DateTime.now()),
+        ImageJoke(title: '2ban', movie: Movie(id: himym), likes: 23, url: 'himym', dateAdded: DateTime.now()),
+        ImageJoke(title: '3ban', movie: Movie(id: himym), likes: 23, url: 'himym', dateAdded: DateTime.now()),
+        ImageJoke(title: '4ban', movie: Movie(id: himym), likes: 23, url: 'himym', dateAdded: DateTime.now()),
+        ImageJoke(title: '1rob', movie: Movie(id: himym), likes: 23, url: 'himym', dateAdded: DateTime.now()),
+        ImageJoke(title: '2rob', movie: Movie(id: himym), likes: 23, url: 'himym', dateAdded: DateTime.now()),
+    ];
+
+    jokeImageList.forEach((joke) async {
+          Map jokeMap = joke.toMap();
+          jokeMap.remove('id');
+          await Firestore.instance
+          .collection('jokes')
+          .document('image_jokes')
+          .collection('content')
+          .add(jokeMap);
+    });
   }
 
   // _loadJokes(){

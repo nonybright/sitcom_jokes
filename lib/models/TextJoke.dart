@@ -1,11 +1,12 @@
 import 'package:sitcom_joke_app/models/Joke.dart';
+import 'package:sitcom_joke_app/models/movie.dart';
 import 'package:sitcom_joke_app/utils/date_formatter.dart';
 
 class TextJoke extends Joke{
 
   String text;
 
-  TextJoke({this.text, id, title, likes, movie, dateAdded}) : super(id:id, title:title, likes:likes, movie:movie, dateAdded:dateAdded );
+  TextJoke({this.text, String id, String title, int likes, Movie movie, DateTime dateAdded}) : super(id:id, title:title, likes:likes, movie:movie, dateAdded:dateAdded );
 
 
   TextJoke.fromMap(Map joke) {
