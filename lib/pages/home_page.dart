@@ -14,19 +14,18 @@ class HomePage extends StatefulWidget {
   _HomePageState createState() => new _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin {
+class _HomePageState extends State<HomePage>
+    with SingleTickerProviderStateMixin {
+  TabController _tabController;
 
-
-TabController _tabController;
-
-Movie _selectedMovie;
+  Movie _selectedMovie;
 
   @override
-    void initState() {
-      // TODO: implement initState
-      super.initState();
-      _tabController = TabController(vsync: this, length: 2);
-    }
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    _tabController = TabController(vsync: this, length: 2);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,7 +37,7 @@ Movie _selectedMovie;
         movieBloc.changeSelectedMovie(movie);
         movieBloc.getJokes(JokeType.text);
         movieBloc.getJokes(JokeType.image);
-        setState(() {   
+        setState(() {
               _selectedMovie = movie;
         });
       },),
@@ -62,6 +61,14 @@ Movie _selectedMovie;
                       "https://images.pexels.com/photos/396547/pexels-photo-396547.jpeg?auto=compress&cs=tinysrgb&h=350",
                       fit: BoxFit.cover,
                     )),
+                    actions: <Widget>[
+                      IconButton(
+                        icon:  Icon(Icons.info),
+                        onPressed: (){
+
+                        },
+                      )
+                    ],
               ),
               SliverPersistentHeader(
                 delegate: _SliverAppBarDelegate(
@@ -96,7 +103,7 @@ Movie _selectedMovie;
   //   drawer:  AppDrawer(onMovieClicked: (movie){
   //       print('movie clicked');
   //       BlocProvider.of(context).movieBloc.getJokes(1, JokeType.text, movie);
-  //       setState(() {   
+  //       setState(() {
   //             _selectedMovie = movie;
   //       });
   //     },),
@@ -105,7 +112,6 @@ Movie _selectedMovie;
   // }
 
 }
-
 
 class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
   _SliverAppBarDelegate(this._tabBar);

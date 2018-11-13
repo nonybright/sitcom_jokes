@@ -4,21 +4,27 @@ import 'dart:collection';
 import 'package:flutter/material.dart';
 import 'package:sitcom_joke_app/models/load_status.dart';
 
+enum ScrollListType{
+  grid,
+  list
+}
+
 class ScrollList extends StatefulWidget {
-  
   final Stream<LoadStatus> loadStatusStream;
   final Stream<UnmodifiableListView<dynamic>> listContentStream;
   final String noItemtext;
   final Function loadMoreAction;
   final Function(dynamic) listItemWidget;
-  ScrollList({
-    Key key,
-    this.loadStatusStream,
-    this.listContentStream,
-    this.noItemtext,
-    this.loadMoreAction,
-    this.listItemWidget
-  }) : super(key: key);
+  final ScrollListType scrollListType;
+  ScrollList(
+      {Key key,
+      this.loadStatusStream,
+      this.listContentStream,
+      this.noItemtext,
+      this.loadMoreAction,
+      this.listItemWidget,
+      this.scrollListType})
+      : super(key: key);
 
   @override
   _ScrollListState createState() => new _ScrollListState();
@@ -41,7 +47,8 @@ class _ScrollListState extends State<ScrollList> {
         initialData: LoadStatus.loading,
         stream: widget.loadStatusStream,
         builder: (context, loadSnapshot) {
-          if (loadSnapshot.data == LoadStatus.loadedMore || loadSnapshot.data == LoadStatus.loadEnd) {
+          if (loadSnapshot.data == LoadStatus.loadedMore ||
+              loadSnapshot.data == LoadStatus.loadEnd) {
             inLoadMore = false;
           } else if (loadSnapshot.data == LoadStatus.loading) {
             return Center(child: CircularProgressIndicator());
@@ -52,22 +59,36 @@ class _ScrollListState extends State<ScrollList> {
               stream: widget.listContentStream,
               builder: (context, listItemsSnapshot) {
                 final listItems = listItemsSnapshot.data;
-                // if (loadSnapshot.data != LoadStatus.loadEnd &&
-                //     loadSnapshot.data != LoadStatus.loading &&
-                //     loadSnapshot.data != LoadStatus.loadingMore &&
-                //     textJokes.isEmpty) { //TODO: try changing to == loadEnd and textJokes.isEmpty
-                //   return Center(
-                //     child: Text('No items found at the moment'),
-                //   );
-                // }
-                 if (loadSnapshot.data == LoadStatus.loadEnd &&
-                    listItems.isEmpty) { 
+                if (loadSnapshot.data == LoadStatus.loadEnd &&
+                    listItems.isEmpty) {
                   return Center(
                     child: Text(widget.noItemtext),
                   );
                 }
 
+                if(widget.scrollListType == ScrollListType.grid){
+
+                    return GridView.builder(
+                    padding: EdgeInsets.all(10.0),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 10.0,
+                        mainAxisSpacing: 10.0),
+                    itemCount: listItems.length,
+                    itemBuilder: (context, index) {
+                      if (index >= listItems.length - 3 &&
+                          !inLoadMore &&
+                          loadSnapshot.data != LoadStatus.loadEnd) {
+                        inLoadMore = true;
+                        widget.loadMoreAction();
+                      }
+                      return widget.listItemWidget(listItems[index]);
+                    },
+                  );
+                }else{
+
                 return ListView.builder(
+                  shrinkWrap: true,
                   itemCount: listItems.length,
                   itemBuilder: (context, index) {
                     if (index >= listItems.length - 3 && !inLoadMore && loadSnapshot.data != LoadStatus.loadEnd) {
@@ -77,6 +98,8 @@ class _ScrollListState extends State<ScrollList> {
                     return widget.listItemWidget(listItems[index]);
                   },
                 );
+                }
+                
               });
         });
   }

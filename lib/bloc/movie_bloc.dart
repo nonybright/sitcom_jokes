@@ -81,7 +81,7 @@ class MovieBloc {
         jokesQuery = jokesQuery.startAfter((jokeType == JokeType.image)
             ? [_lastImageJoke['title']]
             : [_lastTextJoke['title']]);
-        _setLoadStatusSubject(jokeType, LoadStatus.loadedMore);
+        _setLoadStatusSubject(jokeType, LoadStatus.loadingMore);
       } else {
         _setLoadStatusSubject(jokeType, LoadStatus.loading);
       }
@@ -89,6 +89,16 @@ class MovieBloc {
       if (movie != null) {
         jokesQuery = jokesQuery.where('movie', isEqualTo: movie.id);
       }
+
+
+      
+      // if(jokeType == JokeType.image){
+
+      //   const jokes = [
+
+      //       new 
+      //   ];
+      // }
 
       jokesQuery.limit(4).snapshots().listen((jokes) async {
         if (jokes.documents.isNotEmpty) {
@@ -224,109 +234,109 @@ class MovieBloc {
     });
   }
 
-  _addJokesToServer() {
+  _addTextJokesToServer() async{
     String friends = '9KfSaN86fI4plZHqURmX';
     String himym = 'IHDbyYe2a8D9xhmZ1nkY';
 
     final textJokes = [
       TextJoke(
-          title: 'chan',
+          title: 'achan',
           text: 'knock knock',
           likes: 1,
           movie: Movie(id: friends),
           dateAdded: DateTime.now()),
       TextJoke(
-          title: 'ross',
+          title: 'bross',
           text: 'ros knock knock',
           likes: 1,
           movie: Movie(id: friends),
           dateAdded: DateTime.now()),
       TextJoke(
-          title: 'rach',
+          title: 'crach',
           text: 'knock knock',
           likes: 1,
           movie: Movie(id: friends),
           dateAdded: DateTime.now()),
       TextJoke(
-          title: 'joe',
+          title: 'djoe',
           text: 'knock knock',
           likes: 1,
           movie: Movie(id: friends),
           dateAdded: DateTime.now()),
       TextJoke(
-          title: 'phoebe',
+          title: 'ephoebe',
           text: 'dd knock knock',
           likes: 1,
           movie: Movie(id: friends),
           dateAdded: DateTime.now()),
       TextJoke(
-          title: 'jennis',
+          title: 'fjennis',
           text: 'jen hahaha knock knock',
           likes: 1,
           movie: Movie(id: friends),
           dateAdded: DateTime.now()),
       TextJoke(
-          title: '2chan',
+          title: 'g2chan',
           text: 'knock knock',
           likes: 1,
           movie: Movie(id: friends),
           dateAdded: DateTime.now()),
       TextJoke(
-          title: '2ross',
+          title: 'h2ross',
           text: 'ros knock knock',
           likes: 1,
           movie: Movie(id: friends),
           dateAdded: DateTime.now()),
       TextJoke(
-          title: '2rach',
+          title: 'i2rach',
           text: 'knock knock',
           likes: 1,
           movie: Movie(id: friends),
           dateAdded: DateTime.now()),
       TextJoke(
-          title: '2joe',
+          title: 'j2joe',
           text: 'knock knock',
           likes: 1,
           movie: Movie(id: friends),
           dateAdded: DateTime.now()),
       TextJoke(
-          title: '2phoebe',
+          title: 'k2phoebe',
           text: 'dd knock knock',
           likes: 1,
           movie: Movie(id: friends),
           dateAdded: DateTime.now()),
       TextJoke(
-          title: '2jennis',
+          title: 'l2jennis',
           text: 'jen hahaha knock knock',
           likes: 1,
           movie: Movie(id: friends),
           dateAdded: DateTime.now()),
       TextJoke(
-          title: 'barney',
+          title: 'mabarney',
           text: 'legendary',
           likes: 1,
           movie: Movie(id: himym),
           dateAdded: DateTime.now()),
       TextJoke(
-          title: 'robin',
+          title: 'mbrobin',
           text: 'ff legendary',
           likes: 1,
           movie: Movie(id: himym),
           dateAdded: DateTime.now()),
       TextJoke(
-          title: 'ted',
+          title: 'mcted',
           text: ' rr legendary',
           likes: 1,
           movie: Movie(id: himym),
           dateAdded: DateTime.now()),
       TextJoke(
-          title: 'marshal',
+          title: 'mdmarshal',
           text: 'rrw legendary',
           likes: 1,
           movie: Movie(id: himym),
           dateAdded: DateTime.now()),
       TextJoke(
-          title: 'lily',
+          title: 'melily',
           text: ' rr legendary',
           likes: 1,
           movie: Movie(id: himym),
@@ -375,15 +385,47 @@ class MovieBloc {
           dateAdded: DateTime.now()),
     ];
 
-    textJokes.forEach((joke) async {
+
+    const startAlpha = 97;
+    const endAlpha = 122;
+
+    for(var i = startAlpha; i <= endAlpha ; i++){
+
+        var joke;
+        if(i < (startAlpha + endAlpha)/2){
+          joke = TextJoke(
+          title: String.fromCharCode(i)+'friends',
+          text: 'friends',
+          likes: i,
+          movie: Movie(id: friends),
+          dateAdded: DateTime.now());
+        }else{
+           joke = TextJoke(
+          title: String.fromCharCode(i)+'himym',
+          text: 'himym',
+          likes: i,
+          movie: Movie(id: himym),
+          dateAdded: DateTime.now());
+        }
+
       Map jokeMap = joke.toMap();
       jokeMap.remove('id');
       await Firestore.instance
           .collection('jokes')
           .document('text_jokes')
           .collection('content')
-          .add(jokeMap);
-    });
+          .add(jokeMap);     
+    }
+
+    // textJokes.forEach((joke) async {
+    //   Map jokeMap = joke.toMap();
+    //   jokeMap.remove('id');
+    //   await Firestore.instance
+    //       .collection('jokes')
+    //       .document('text_jokes')
+    //       .collection('content')
+    //       .add(jokeMap);
+    // });
     // Firestore.instance.collection('jokes').document('text_jokes').collection('content').add(data);
   }
 

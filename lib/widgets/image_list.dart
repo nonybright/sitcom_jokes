@@ -5,6 +5,7 @@ import 'package:sitcom_joke_app/bloc/bloc_provider.dart';
 import 'package:sitcom_joke_app/models/ImageJoke.dart';
 import 'package:sitcom_joke_app/models/joke_type.dart';
 import 'package:sitcom_joke_app/models/load_status.dart';
+import 'package:sitcom_joke_app/widgets/image_joke_card.dart';
 import 'package:sitcom_joke_app/widgets/scroll_list.dart';
 
 class ImageList extends StatefulWidget {
@@ -62,14 +63,12 @@ class _ImageListState extends State<ImageList> {
     return ScrollList(loadStatusStream: movieBloc.imageLoadStatus,
       listContentStream: movieBloc.imageJokes,
       noItemtext: 'No images To load at the moment',
+      scrollListType: ScrollListType.grid,
       loadMoreAction: (){
         movieBloc.getJokes(JokeType.image);
       },
       listItemWidget: (imageJoke){
-            return Container(
-               height: 180.0,
-               child: Text(imageJoke.title + '  '+imageJoke.url),
-            );
+            return ImageJokeCard(imageJoke);
       },
     );
   }
