@@ -3,6 +3,7 @@ import 'dart:collection';
 import 'package:flutter/material.dart';
 import 'package:sitcom_joke_app/bloc/bloc_provider.dart';
 import 'package:sitcom_joke_app/models/movie.dart';
+import 'package:sitcom_joke_app/models/user.dart';
 import 'package:sitcom_joke_app/pages/auth_page.dart';
 
 class AppDrawer extends StatefulWidget {
@@ -18,59 +19,38 @@ class _DrawerState extends State<AppDrawer> {
 
   @override
   Widget build(BuildContext context) {
-    final movieBloc = BlocProvider.of(context).movieBloc;
+    final userBloc = BlocProvider.of(context).userBloc;
 
     return Drawer(
-      child: ListView(
-        children: <Widget>[
-          _drawerHeader(),
-          _drawerTile(Icons.cloud, 'Latest Updates', () {
-            _navigateToPage(null);
-          }),
-          _drawerTile(Icons.dashboard, 'All Sitcoms', () {
-            _navigateToPage(null);
-          }),
-          _drawerTile(Icons.favorite, 'Favorites', () {
-            _navigateToPage(null);
-          }),
-          Divider(),
-          _drawerTile(Icons.share, 'Share', () {
-            _navigateToPage(null);
-          }),
-          _drawerTile(Icons.help, 'About', () {
-            _navigateToPage(null);
-          }),
-        ],
+      child: StreamBuilder(
+        initialData: null,
+        stream: userBloc.currentUser,
+        builder: (context, snapShot) {
+          return ListView(
+            children: <Widget>[
+              _drawerHeader(snapShot.data),
+              _drawerTile(Icons.cloud, 'Latest Updates', () {
+                _navigateToPage(null);
+              }),
+              _drawerTile(Icons.dashboard, 'All Sitcoms', () {
+                _navigateToPage(null);
+              }),
+              _drawerTile(Icons.favorite, 'Favorites', () {
+                _navigateToPage(null);
+              }),
+              Divider(),
+              _drawerTile(Icons.share, 'Share', () {
+                _navigateToPage(null);
+              }),
+              _drawerTile(Icons.help, 'About', () {
+                _navigateToPage(null);
+              }),
+            ],
+          );
+        },
       ),
     );
-
-    // return StreamBuilder<UnmodifiableListView<Movie>>(
-    //           initialData: UnmodifiableListView<Movie>([]),
-    //           stream: movieBloc.movies,
-    //           builder: (context, moviesSnapshot) {
-    //             final movies = moviesSnapshot.data;
-    //               return Drawer(
-
-    //                    child: ListView.builder(
-    //                       itemCount: movies.length,
-    //                       itemBuilder: (context, index){
-    //                           return _drawerTile(movies[index], (){
-    //                               widget.onMovieClicked(movies[index]);
-    //                               Navigator.pop(context);
-    //                           });
-    //                       },
-    //                     )
-    //             );
-    //           });
   }
-
-//  Widget _drawerTile(Movie movie, onTap) {
-//     return ListTile(
-//       leading: new Icon(Icons.description),
-//       title: Text(movie.name),
-//       onTap: onTap,
-//     );
-//   }
 
   Widget _drawerTile(IconData icon, String title, Function onTap) {
     return ListTile(
@@ -80,7 +60,7 @@ class _DrawerState extends State<AppDrawer> {
     );
   }
 
-  _drawerHeader() {
+  _drawerHeader(User user) {
     return Stack(
       children: <Widget>[
         Container(
@@ -99,21 +79,26 @@ class _DrawerState extends State<AppDrawer> {
             right: 0.0,
             child: Padding(
               padding: const EdgeInsets.only(bottom: 10.0),
-              child: (1 == 2) ? _loggedInHeaderContent() : _authHeaderContent(),
+              child: (user != null)
+                  ? _loggedInHeaderContent(user)
+                  : _authHeaderContent(),
             ))
       ],
     );
   }
 
-  _loggedInHeaderContent() {
+  _loggedInHeaderContent(User user) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         CircleAvatar(
-          child: Text('U'),
+          backgroundImage: (user.photoUrl != null)
+              ? NetworkImage(user.photoUrl)
+              : AssetImage('assets/images/default_avatar.png'),
         ),
         Padding(
           padding: const EdgeInsets.only(left: 10.0),
-          child: Text('Username',
+          child: Text(user.username,
               style: TextStyle(
                 color: Colors.white,
               )),
@@ -145,6 +130,7 @@ class _DrawerState extends State<AppDrawer> {
   }
 
   _navigateToPage(page) {
+    Navigator.pop(context);
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => page),

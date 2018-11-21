@@ -1,24 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:sitcom_joke_app/bloc/movie_bloc.dart';
+import 'package:sitcom_joke_app/bloc/user_bloc.dart';
 
 class BlocProvider extends InheritedWidget {
 
-  final blocState = new BlocState(
-        movieBloc: MovieBloc()
-      );
+  final MovieBloc movieBloc;
+  final UserBloc userBloc;
 
-  BlocProvider({Key key, Widget child}) : super(key: key, child: child);
+  BlocProvider({Key key, this.movieBloc, this.userBloc, Widget child}) : super(key: key, child: child);
 
   bool updateShouldNotify(_) => true;
 
-  static BlocState of(BuildContext context) {
-    return (context.inheritFromWidgetOfExactType(BlocProvider) as BlocProvider)
-        .blocState;
+  static BlocProvider of(BuildContext context) {
+    return (context.inheritFromWidgetOfExactType(BlocProvider) as BlocProvider);
   }
-}
-
-class BlocState {
-
-  final MovieBloc movieBloc;
-  BlocState({this.movieBloc});
 }

@@ -32,6 +32,7 @@ class _HomePageState extends State<HomePage>
     MovieBloc movieBloc = BlocProvider.of(context).movieBloc;
 
     return Scaffold(
+      
       drawer:  AppDrawer(onMovieClicked: (movie){
         print('movie clicked');
         movieBloc.changeSelectedMovie(movie);
@@ -51,7 +52,6 @@ class _HomePageState extends State<HomePage>
                 floating: false,
                 pinned: true,
                 flexibleSpace: FlexibleSpaceBar(
-                    centerTitle: true,
                     title: Text((_selectedMovie != null)? _selectedMovie.name: "Sitcom Jokes",
                         style: TextStyle(
                           color: Colors.white,
