@@ -5,6 +5,7 @@ import 'package:sitcom_joke_app/bloc/bloc_provider.dart';
 import 'package:sitcom_joke_app/models/movie.dart';
 import 'package:sitcom_joke_app/models/user.dart';
 import 'package:sitcom_joke_app/pages/auth_page.dart';
+import 'package:sitcom_joke_app/pages/movies_list_page.dart';
 
 class AppDrawer extends StatefulWidget {
   final Function(Movie) onMovieClicked;
@@ -20,25 +21,38 @@ class _DrawerState extends State<AppDrawer> {
   @override
   Widget build(BuildContext context) {
     final userBloc = BlocProvider.of(context).userBloc;
+    final movieBloc = BlocProvider.of(context).movieBloc;
 
     return Drawer(
       child: StreamBuilder(
         initialData: null,
         stream: userBloc.currentUser,
-        builder: (context, snapShot) {
+        builder: (context, currentUserSnapShot) {
           return ListView(
             children: <Widget>[
-              _drawerHeader(snapShot.data),
+              _drawerHeader(currentUserSnapShot.data),
               _drawerTile(Icons.cloud, 'Latest Updates', () {
                 _navigateToPage(null);
               }),
               _drawerTile(Icons.dashboard, 'All Sitcoms', () {
-                _navigateToPage(null);
+                movieBloc.getMovies();
+                _navigateToPage(MoviesListPage());
+
               }),
               _drawerTile(Icons.favorite, 'Favorites', () {
                 _navigateToPage(null);
               }),
+               _drawerTile(Icons.add_comment, 'Add Joke', () {
+                 if(currentUserSnapShot.data != null){
+                    _navigateToPage(null);
+                 }else{
+                   _navigateToPage(AuthPage(AuthType.login));
+                 }
+              }),
               Divider(),
+               _drawerTile(Icons.settings, 'Settings', () {
+                _navigateToPage(null);
+              }),
               _drawerTile(Icons.share, 'Share', () {
                 _navigateToPage(null);
               }),

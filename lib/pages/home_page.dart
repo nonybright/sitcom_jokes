@@ -3,6 +3,7 @@ import 'package:sitcom_joke_app/bloc/bloc_provider.dart';
 import 'package:sitcom_joke_app/bloc/movie_bloc.dart';
 import 'package:sitcom_joke_app/models/joke_type.dart';
 import 'package:sitcom_joke_app/models/movie.dart';
+import 'package:sitcom_joke_app/pages/movie_details_page.dart';
 import 'package:sitcom_joke_app/widgets/app_drawer.dart';
 import 'package:sitcom_joke_app/widgets/image_list.dart';
 import 'package:sitcom_joke_app/widgets/text_list.dart';
@@ -52,11 +53,16 @@ class _HomePageState extends State<HomePage>
                 floating: false,
                 pinned: true,
                 flexibleSpace: FlexibleSpaceBar(
-                    title: Text((_selectedMovie != null)? _selectedMovie.name: "Sitcom Jokes",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16.0,
-                        )),
+                    title: GestureDetector(
+                                          child: Text((_selectedMovie != null)? _selectedMovie.name: "Sitcom Jokes",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16.0,
+                          )),
+                          onTap: (){
+                           Navigator.push(context, MaterialPageRoute(builder:(context) => MovieDetailsPage()));
+                          },
+                    ),
                     background: Image.network(
                       "https://images.pexels.com/photos/396547/pexels-photo-396547.jpeg?auto=compress&cs=tinysrgb&h=350",
                       fit: BoxFit.cover,
@@ -65,7 +71,7 @@ class _HomePageState extends State<HomePage>
                       IconButton(
                         icon:  Icon(Icons.info),
                         onPressed: (){
-
+                            Navigator.push(context, MaterialPageRoute(builder:(context) => MovieDetailsPage()));
                         },
                       )
                     ],
