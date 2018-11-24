@@ -25,6 +25,8 @@ class MovieBloc {
 
   final _moviesSubject = BehaviorSubject<UnmodifiableListView<Movie>>(
       seedValue: UnmodifiableListView([]));
+  final _getMoviesSubject = BehaviorSubject<Map>(seedValue: null);
+  final _movieLoadStatusSubject = BehaviorSubject<LoadStatus>(seedValue: LoadStatus.loading);
   final _imageJokesSubject = BehaviorSubject<UnmodifiableListView<ImageJoke>>(
       seedValue: UnmodifiableListView([]));
   final _textJokesSubject = BehaviorSubject<UnmodifiableListView<TextJoke>>(
@@ -40,6 +42,7 @@ class MovieBloc {
       (jokeType) => _getJokesSubject.sink.add({'jokeType': jokeType});
 
   Stream<UnmodifiableListView<Movie>> get movies => _moviesSubject.stream;
+  Stream<LoadStatus> get movieLoadStatus => _movieLoadStatusSubject.stream;
   Stream<UnmodifiableListView<ImageJoke>> get imageJokes =>
       _imageJokesSubject.stream;
   Stream<UnmodifiableListView<TextJoke>> get textJokes =>
@@ -57,8 +60,30 @@ class MovieBloc {
         return _selectedMovieSubject.sink.add(movie);
       };
 
+  Function() get getMovies => () => _getMoviesSubject.sink.add(null);
+
   MovieBloc() {
-    _loadAllMovies();
+    //_loadAllMovies();
+
+    _getMoviesSubject.stream.listen((Map options){
+
+        _movieLoadStatusSubject.sink.add(LoadStatus.loading);
+          Firestore.instance.collection('movies').snapshots().listen((data) {
+                List<Movie> movies = data.documents
+                    .map((doc) => Movie(
+                        id: doc.documentID,
+                        name: doc['name'],
+                        description: doc['description']))
+                    .toList();
+                _movies = movies;
+                _moviesSubject.sink.add(UnmodifiableListView(_movies));
+                //modify this for infinite scroll and remove the loadend
+                _movieLoadStatusSubject.sink.add(LoadStatus.loadEnd);
+          }).onError((err){
+            _movieLoadStatusSubject.sink.add(LoadStatus.error);
+          });
+
+    });
 
     _getJokesSubject.stream.withLatestFrom(_selectedMovieSubject.stream,
         (Map map, Movie selectedMovie) {
@@ -89,16 +114,6 @@ class MovieBloc {
       if (movie != null) {
         jokesQuery = jokesQuery.where('movie', isEqualTo: movie.id);
       }
-
-
-      
-      // if(jokeType == JokeType.image){
-
-      //   const jokes = [
-
-      //       new 
-      //   ];
-      // }
 
       jokesQuery.limit(4).snapshots().listen((jokes) async {
         if (jokes.documents.isNotEmpty) {
@@ -212,27 +227,18 @@ class MovieBloc {
     }
   }
 
-  _loadAllMovies() {
-    // List<Movie> movies = [
-    //    Movie(id: '1', name: 'friends', description: 'i\'ll be there for you', seasons: 10, maxEpisodes: 24, dateStarted: null, dateEnded: null),
-    //    Movie(id: '2', name: 'himym', description: 'i\'ll be there for you', seasons: 10, maxEpisodes: 24, dateStarted: null, dateEnded: null),
-    //    Movie(id: '3', name: 'evry hates chris', description: 'i\'ll be there for you', seasons: 10, maxEpisodes: 24, dateStarted: null, dateEnded: null),
-    //    Movie(id: '4', name: 'bbt', description: 'i\'ll be there for you', seasons: 10, maxEpisodes: 24, dateStarted: null, dateEnded: null),
-    //    Movie(id: '5', name: 'my wife n kids', description: 'i\'ll be there for you', seasons: 10, maxEpisodes: 24, dateStarted: null, dateEnded: null),
-    //    Movie(id: '6', name: 'baby daddy', description: 'i\'ll be there for you', seasons: 10, maxEpisodes: 24, dateStarted: null, dateEnded: null)
-    // ];
-
-    Firestore.instance.collection('movies').snapshots().listen((data) {
-      List<Movie> movies = data.documents
-          .map((doc) => Movie(
-              id: doc.documentID,
-              name: doc['name'],
-              description: doc['description']))
-          .toList();
-      _movies.addAll(movies);
-      _moviesSubject.sink.add(UnmodifiableListView(_movies));
-    });
-  }
+  // _loadAllMovies() {
+  //   Firestore.instance.collection('movies').snapshots().listen((data) {
+  //     List<Movie> movies = data.documents
+  //         .map((doc) => Movie(
+  //             id: doc.documentID,
+  //             name: doc['name'],
+  //             description: doc['description']))
+  //         .toList();
+  //     _movies.addAll(movies);
+  //     _moviesSubject.sink.add(UnmodifiableListView(_movies));
+  //   });
+  // }
 
   _addTextJokesToServer() async{
     String friends = '9KfSaN86fI4plZHqURmX';
