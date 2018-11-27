@@ -5,26 +5,31 @@ import 'package:transparent_image/transparent_image.dart';
 class ImageJokeCard extends StatelessWidget {
 
   final ImageJoke imageJoke;
-  ImageJokeCard(this.imageJoke);
+  final Function onTap;
+  ImageJokeCard(this.imageJoke, this.onTap);
 
   @override
   Widget build(BuildContext context) {
-    return _cardTypeOne();
+    return _cardTypeOne(this.onTap);
   }
 
-  _cardTypeOne(){
+  _cardTypeOne(onTap){
 
     return GridTile(
-      child: FadeInImage.memoryNetwork(
-        fit: BoxFit.fill,
-        placeholder: kTransparentImage,
-        image: imageJoke.url,
+      child: GestureDetector(
+              child: FadeInImage.memoryNetwork(
+          fit: BoxFit.fill,
+          placeholder: kTransparentImage,
+          image: imageJoke.url,
+        ),
+        onTap: onTap,
       ),
       footer: GridTileBar(
         backgroundColor: Colors.black38,
         title: Text(imageJoke.title),
         trailing: IconButton(icon: Icon(Icons.favorite,), onPressed:  (){},),
       ),
+      
     );
   }
 

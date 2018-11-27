@@ -2,6 +2,7 @@ import 'dart:collection';
 
 import 'package:flutter/material.dart';
 import 'package:sitcom_joke_app/bloc/bloc_provider.dart';
+import 'package:sitcom_joke_app/models/joke_type.dart';
 import 'package:sitcom_joke_app/models/movie.dart';
 import 'package:sitcom_joke_app/models/user.dart';
 import 'package:sitcom_joke_app/pages/auth_page.dart';
@@ -32,7 +33,11 @@ class _DrawerState extends State<AppDrawer> {
             children: <Widget>[
               _drawerHeader(currentUserSnapShot.data),
               _drawerTile(Icons.cloud, 'Latest Updates', () {
-                _navigateToPage(null);
+                movieBloc.changeSelectedMovie(null);
+                movieBloc.getJokes(JokeType.text); 
+                movieBloc.getJokes(JokeType.image); 
+                Navigator.pop(context);
+                //_navigateToPage(null);
               }),
               _drawerTile(Icons.dashboard, 'All Sitcoms', () {
                 movieBloc.getMovies();

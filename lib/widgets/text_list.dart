@@ -3,6 +3,7 @@ import 'dart:collection';
 import 'package:flutter/material.dart';
 import 'package:sitcom_joke_app/bloc/bloc_provider.dart';
 import 'package:sitcom_joke_app/models/joke_type.dart';
+import 'package:sitcom_joke_app/pages/joke_slide_page.dart';
 import 'package:sitcom_joke_app/widgets/scroll_list.dart';
 import 'package:sitcom_joke_app/widgets/text_joke_card.dart';
 
@@ -33,8 +34,12 @@ class _TextListState extends State<TextList> {
       loadMoreAction: (){
         movieBloc.getJokes(JokeType.text);
       },
-      listItemWidget: (textJoke){
-            return TextJokeCard(textJoke);
+      listItemWidget: (textJoke, index){
+            return TextJokeCard(textJoke, (){
+
+               Navigator.push(context, MaterialPageRoute(builder:(context) => JokeSlidePage(initialPage: index, selectedJoke: textJoke, jokeType: JokeType.text,)));
+
+            });
       },
     );
   }

@@ -38,7 +38,7 @@ class _MoviesListPageState extends State<MoviesListPage> {
         loadMoreAction: (){
             //
         },
-        listItemWidget: (movie){
+        listItemWidget: (movie, index){
              return _movieCard(movie, movieBloc, context);
         },
       ),

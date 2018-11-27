@@ -14,7 +14,7 @@ class ScrollList extends StatefulWidget {
   final Stream<UnmodifiableListView<dynamic>> listContentStream;
   final String noItemtext;
   final Function loadMoreAction;
-  final Function(dynamic) listItemWidget;
+  final Function(dynamic, int) listItemWidget;
   final ScrollListType scrollListType;
   ScrollList(
       {Key key,
@@ -41,7 +41,6 @@ class _ScrollListState extends State<ScrollList> {
 
   @override
   Widget build(BuildContext context) {
-    //final movieBloc = BlocProvider.of(context).movieBloc;
 
     return StreamBuilder<LoadStatus>(
         initialData: LoadStatus.loading,
@@ -82,7 +81,7 @@ class _ScrollListState extends State<ScrollList> {
                         inLoadMore = true;
                         widget.loadMoreAction();
                       }
-                      return widget.listItemWidget(listItems[index]);
+                      return widget.listItemWidget(listItems[index], index);
                     },
                   );
                 }else{
@@ -95,7 +94,7 @@ class _ScrollListState extends State<ScrollList> {
                       inLoadMore = true;
                       widget.loadMoreAction();
                     }
-                    return widget.listItemWidget(listItems[index]);
+                    return widget.listItemWidget(listItems[index], index);
                   },
                 );
                 }

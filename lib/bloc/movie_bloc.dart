@@ -63,7 +63,6 @@ class MovieBloc {
   Function() get getMovies => () => _getMoviesSubject.sink.add(null);
 
   MovieBloc() {
-    //_loadAllMovies();
 
     _getMoviesSubject.stream.listen((Map options){
 
