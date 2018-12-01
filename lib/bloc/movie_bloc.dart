@@ -91,17 +91,26 @@ class MovieBloc {
 
       String documentType = '';
 
+       _uploadLoadStatusSubject.sink.add(LoadStatus.loading);
+
       if (joke is TextJoke) {
         documentType = 'text_jokes';
         await Firestore.instance
             .collection('jokes')
             .document(documentType)
             .collection('content')
-            .add(jokeMap);
+            .add(jokeMap).then((onValue){
+                         _uploadLoadStatusSubject.sink.add(LoadStatus.loaded);
+                         completer.completed(null);
+            }, onError: (error){
+                     _uploadLoadStatusSubject.sink.add(LoadStatus.error);
+                     completer.error(error);
+            });
+
       } else if (joke is ImageJoke) {
         documentType = 'image_jokes';
 
-                           _uploadLoadStatusSubject.sink.add(LoadStatus.loading);
+                          
                           StorageReference ref = FirebaseStorage.instance
                       .ref()
                       .child('joke_images/' + joke.title);
@@ -117,7 +126,10 @@ class MovieBloc {
                     .add(jokeMap).then((onValue){
                          _uploadLoadStatusSubject.sink.add(LoadStatus.loaded);
                          completer.completed(null);
-                    });
+                    }, onError: (error){
+                     _uploadLoadStatusSubject.sink.add(LoadStatus.error);
+                     completer.error(error);
+            });
       }
     });
 
