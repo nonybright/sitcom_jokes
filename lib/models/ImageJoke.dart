@@ -7,6 +7,7 @@ class ImageJoke extends Joke{
   String url;
   ImageJoke({this.url, String id, String title, int likes, Movie movie, DateTime dateAdded}) : super(id:id, title:title, likes:likes, movie:movie, dateAdded:dateAdded );
 
+
   ImageJoke.fromMap(Map joke) {
 
      this.id = joke['id'];

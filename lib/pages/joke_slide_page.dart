@@ -84,7 +84,8 @@ class _JokeSlidePageState extends State<JokeSlidePage> {
                       }
 
                                   if(widget.jokeType == JokeType.image){
-
+                                      
+                                      //use jokesSnapshot.data instead of _currentJoke and for TextJoke too
                                      return ZoomableImage(
                                      NetworkImage((_currentJoke  as ImageJoke).url),
                                       placeholder: const Center(

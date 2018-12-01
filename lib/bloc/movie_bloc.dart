@@ -1,11 +1,15 @@
 import 'dart:async';
 import 'dart:collection';
+import 'dart:io';
 
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:sitcom_joke_app/models/ImageJoke.dart';
 import 'package:sitcom_joke_app/models/Joke.dart';
 import 'package:sitcom_joke_app/models/TextJoke.dart';
+import 'package:sitcom_joke_app/models/bloc_completer.dart';
 import 'package:sitcom_joke_app/models/joke_type.dart';
 import 'package:sitcom_joke_app/models/load_status.dart';
 import 'package:sitcom_joke_app/models/movie.dart';
@@ -26,7 +30,8 @@ class MovieBloc {
   final _moviesSubject = BehaviorSubject<UnmodifiableListView<Movie>>(
       seedValue: UnmodifiableListView([]));
   final _getMoviesSubject = BehaviorSubject<Map>(seedValue: null);
-  final _movieLoadStatusSubject = BehaviorSubject<LoadStatus>(seedValue: LoadStatus.loading);
+  final _movieLoadStatusSubject =
+      BehaviorSubject<LoadStatus>(seedValue: LoadStatus.loading);
   final _imageJokesSubject = BehaviorSubject<UnmodifiableListView<ImageJoke>>(
       seedValue: UnmodifiableListView([]));
   final _textJokesSubject = BehaviorSubject<UnmodifiableListView<TextJoke>>(
@@ -37,9 +42,14 @@ class MovieBloc {
   final _textLoadStatusSubject =
       BehaviorSubject<LoadStatus>(seedValue: LoadStatus.loading);
   final _selectedMovieSubject = BehaviorSubject<Movie>(seedValue: null);
+  final _searchedMovieResultSubject =
+      BehaviorSubject<UnmodifiableListView<Movie>>(
+          seedValue: UnmodifiableListView([]));
+  final _movieTermToSearchSubject = BehaviorSubject<String>(seedValue: null);
 
-  void Function(JokeType) get getJokes =>
-      (jokeType) => _getJokesSubject.sink.add({'jokeType': jokeType});
+  final _uploadJokeSubject = BehaviorSubject<Map>(seedValue: null);
+  final _uploadLoadStatusSubject =
+      BehaviorSubject<LoadStatus>(seedValue: LoadStatus.loadEnd);
 
   Stream<UnmodifiableListView<Movie>> get movies => _moviesSubject.stream;
   Stream<LoadStatus> get movieLoadStatus => _movieLoadStatusSubject.stream;
@@ -50,8 +60,16 @@ class MovieBloc {
   Stream<LoadStatus> get imageLoadStatus => _imageLoadStatusSubject.stream;
   Stream<LoadStatus> get textLoadStatus => _textLoadStatusSubject.stream;
   Stream<Movie> get selectedMovie => _selectedMovieSubject.stream;
+  Stream<UnmodifiableListView<Movie>> get searchedMovieResult =>
+      _searchedMovieResultSubject.stream;
+  Stream<LoadStatus> get uploadLoadStatus => _uploadLoadStatusSubject.stream;
 
   //sink
+  Function(String) get getMoviesLike =>
+      (searchTerm) => _movieTermToSearchSubject.sink.add(searchTerm);
+  void Function(JokeType) get getJokes =>
+      (jokeType) => _getJokesSubject.sink.add({'jokeType': jokeType});
+
   Function(Movie) get changeSelectedMovie => (movie) {
         _currentImagePage = 1;
         _currentTextPage = 1;
@@ -61,27 +79,81 @@ class MovieBloc {
       };
 
   Function() get getMovies => () => _getMoviesSubject.sink.add(null);
+  Function(Joke, File, BlocCompleter) get upLoadJoke => (joke, image , completer) =>
+      _uploadJokeSubject.sink.add({'joke': joke, 'image': image, 'completer': completer});
 
   MovieBloc() {
+    _uploadJokeSubject.stream.listen((Map uploadDetails) async {
+      Joke joke = uploadDetails['joke'];
+      Map jokeMap = joke.toMap();
+      jokeMap.remove('id');
+      BlocCompleter completer = uploadDetails['completer'];
 
-    _getMoviesSubject.stream.listen((Map options){
+      String documentType = '';
 
-        _movieLoadStatusSubject.sink.add(LoadStatus.loading);
-          Firestore.instance.collection('movies').snapshots().listen((data) {
-                List<Movie> movies = data.documents
-                    .map((doc) => Movie(
-                        id: doc.documentID,
-                        name: doc['name'],
-                        description: doc['description']))
-                    .toList();
-                _movies = movies;
-                _moviesSubject.sink.add(UnmodifiableListView(_movies));
-                //modify this for infinite scroll and remove the loadend
-                _movieLoadStatusSubject.sink.add(LoadStatus.loadEnd);
-          }).onError((err){
-            _movieLoadStatusSubject.sink.add(LoadStatus.error);
-          });
+      if (joke is TextJoke) {
+        documentType = 'text_jokes';
+        await Firestore.instance
+            .collection('jokes')
+            .document(documentType)
+            .collection('content')
+            .add(jokeMap);
+      } else if (joke is ImageJoke) {
+        documentType = 'image_jokes';
 
+                           _uploadLoadStatusSubject.sink.add(LoadStatus.loading);
+                          StorageReference ref = FirebaseStorage.instance
+                      .ref()
+                      .child('joke_images/' + joke.title);
+                      
+                  StorageUploadTask uploadTask = ref.putFile(uploadDetails['image']);
+                  String downloadUrl = await (await uploadTask.onComplete).ref.getDownloadURL();
+
+                   jokeMap['url'] = downloadUrl.toString();
+                   await Firestore.instance
+                    .collection('jokes')
+                    .document(documentType)
+                    .collection('content')
+                    .add(jokeMap).then((onValue){
+                         _uploadLoadStatusSubject.sink.add(LoadStatus.loaded);
+                         completer.completed(null);
+                    });
+      }
+    });
+
+    _movieTermToSearchSubject.stream.listen((termToSearch) {
+      _movies.add(Movie(
+          id: 'www', name: termToSearch, seasons: 5, description: 'ssss'));
+      _searchedMovieResultSubject.sink.add(UnmodifiableListView(_movies));
+
+      // Firestore.instance.collection('movies').orderBy('name').startAt([termToSearch]).endAt([termToSearch+'\uf8ff']).snapshots().listen((moviesData){
+
+      //          List<Movie> movies = moviesData.documents
+      //             .map((doc) => Movie(
+      //                 id: doc.documentID,
+      //                 name: doc['name'],
+      //                 description: doc['description']))
+      //             .toList();
+      //           _searchedMovieResultSubject.sink.add(UnmodifiableListView(movies));
+      // });
+    });
+
+    _getMoviesSubject.stream.listen((Map options) {
+      _movieLoadStatusSubject.sink.add(LoadStatus.loading);
+      Firestore.instance.collection('movies').snapshots().listen((data) {
+        List<Movie> movies = data.documents
+            .map((doc) => Movie(
+                id: doc.documentID,
+                name: doc['name'],
+                description: doc['description']))
+            .toList();
+        _movies = movies;
+        _moviesSubject.sink.add(UnmodifiableListView(_movies));
+        //modify this for infinite scroll and remove the loadend
+        _movieLoadStatusSubject.sink.add(LoadStatus.loadEnd);
+      }).onError((err) {
+        _movieLoadStatusSubject.sink.add(LoadStatus.error);
+      });
     });
 
     _getJokesSubject.stream.withLatestFrom(_selectedMovieSubject.stream,
@@ -133,25 +205,24 @@ class MovieBloc {
           //TODO: check if the list will show empty when previous items already exist and the movie type is changed. if it doesn't,
           //uncomment the code below
 
-           if(currentPage == 1){
-             _addJokes([], jokeType);
-             _updateJokeSubject(jokeType);
-           }
+          if (currentPage == 1) {
+            _addJokes([], jokeType);
+            _updateJokeSubject(jokeType);
+          }
           _setLoadStatusSubject(jokeType, LoadStatus.loadEnd);
         }
       });
     });
   }
 
-  _getMovieFromCache(String movieId){
-
-      if(movieCache.containsKey(movieId)){
-        return movieCache[movieId];
-      }
-      return null;
+  _getMovieFromCache(String movieId) {
+    if (movieCache.containsKey(movieId)) {
+      return movieCache[movieId];
+    }
+    return null;
   }
 
-  _getMovieFromList(String movieId){
+  _getMovieFromList(String movieId) {
     return _movies.firstWhere((movie) => movie.id == movieId);
   }
 
@@ -174,28 +245,30 @@ class MovieBloc {
   _addJokes(List<Joke> jokes, JokeType jokeType, {bool append = false}) {
     if (jokeType == JokeType.image) {
       List<ImageJoke> imageJokes = jokes.cast<ImageJoke>();
-     (!append) ? _imageJokes = imageJokes : _imageJokes.addAll(imageJokes); //check this
+      (!append)
+          ? _imageJokes = imageJokes
+          : _imageJokes.addAll(imageJokes); //check this
     } else {
       List<TextJoke> textJoke = jokes.cast<TextJoke>();
-      if(!append){
+      if (!append) {
         _textJokes = textJoke;
-      }else{
-      _textJokes.addAll(textJoke);
+      } else {
+        _textJokes.addAll(textJoke);
       }
     }
   }
 
   _createJokeList(
       List<DocumentSnapshot> jokeDocuments, JokeType jokeType, Movie movie) {
-    List<dynamic> jokes =  jokeDocuments.map((joke) {
+    List<dynamic> jokes = jokeDocuments.map((joke) {
       Map jokeData = joke.data;
       jokeData['id'] = joke.documentID;
 
-      if(movie == null){
-       // movie = _getMovieFromCache(jokeData['movie']) || _getMovieFromList(jokeData['movie']);
+      if (movie == null) {
+        // movie = _getMovieFromCache(jokeData['movie']) || _getMovieFromList(jokeData['movie']);
         movie = _getMovieFromCache(jokeData['movie']);
-        if(movie == null){
-            movie = _getMovieFromList(jokeData['movie']);
+        if (movie == null) {
+          movie = _getMovieFromList(jokeData['movie']);
         }
       }
       jokeData['movie'] = movie;
@@ -239,7 +312,7 @@ class MovieBloc {
   //   });
   // }
 
-  _addTextJokesToServer() async{
+  _addTextJokesToServer() async {
     String friends = '9KfSaN86fI4plZHqURmX';
     String himym = 'IHDbyYe2a8D9xhmZ1nkY';
 
@@ -390,28 +463,26 @@ class MovieBloc {
           dateAdded: DateTime.now()),
     ];
 
-
     const startAlpha = 97;
     const endAlpha = 122;
 
-    for(var i = startAlpha; i <= endAlpha ; i++){
-
-        var joke;
-        if(i < (startAlpha + endAlpha)/2){
-          joke = TextJoke(
-          title: String.fromCharCode(i)+'friends',
-          text: 'friends',
-          likes: i,
-          movie: Movie(id: friends),
-          dateAdded: DateTime.now());
-        }else{
-           joke = TextJoke(
-          title: String.fromCharCode(i)+'himym',
-          text: 'himym',
-          likes: i,
-          movie: Movie(id: himym),
-          dateAdded: DateTime.now());
-        }
+    for (var i = startAlpha; i <= endAlpha; i++) {
+      var joke;
+      if (i < (startAlpha + endAlpha) / 2) {
+        joke = TextJoke(
+            title: String.fromCharCode(i) + 'friends',
+            text: 'friends',
+            likes: i,
+            movie: Movie(id: friends),
+            dateAdded: DateTime.now());
+      } else {
+        joke = TextJoke(
+            title: String.fromCharCode(i) + 'himym',
+            text: 'himym',
+            likes: i,
+            movie: Movie(id: himym),
+            dateAdded: DateTime.now());
+      }
 
       Map jokeMap = joke.toMap();
       jokeMap.remove('id');
@@ -419,7 +490,7 @@ class MovieBloc {
           .collection('jokes')
           .document('text_jokes')
           .collection('content')
-          .add(jokeMap);     
+          .add(jokeMap);
     }
 
     // textJokes.forEach((joke) async {
@@ -434,40 +505,137 @@ class MovieBloc {
     // Firestore.instance.collection('jokes').document('text_jokes').collection('content').add(data);
   }
 
-
-  _addImageJokeToServer(){
-
+  _addImageJokeToServer() {
     String friends = '9KfSaN86fI4plZHqURmX';
     String himym = 'IHDbyYe2a8D9xhmZ1nkY';
 
     final jokeImageList = [
-
-        ImageJoke(title: '1chan', movie: Movie(id: friends), likes: 23, url: 'hello', dateAdded: DateTime.now()),
-        ImageJoke(title: '2chan', movie: Movie(id: friends), likes: 23, url: 'hello', dateAdded: DateTime.now()),
-        ImageJoke(title: '3chan', movie: Movie(id: friends), likes: 23, url: 'hello', dateAdded: DateTime.now()),
-        ImageJoke(title: '4chan', movie: Movie(id: friends), likes: 23, url: 'hello', dateAdded: DateTime.now()),
-        ImageJoke(title: '1ross', movie: Movie(id: friends), likes: 23, url: 'hello', dateAdded: DateTime.now()),
-        ImageJoke(title: '2ross', movie: Movie(id: friends), likes: 23, url: 'hello', dateAdded: DateTime.now()),
-        ImageJoke(title: '3ross', movie: Movie(id: friends), likes: 23, url: 'hello', dateAdded: DateTime.now()),
-        ImageJoke(title: '4ross', movie: Movie(id: friends), likes: 23, url: 'hello', dateAdded: DateTime.now()),
-        ImageJoke(title: '1mon', movie: Movie(id: friends), likes: 23, url: 'hello', dateAdded: DateTime.now()),
-        ImageJoke(title: '2mon', movie: Movie(id: friends), likes: 23, url: 'hello', dateAdded: DateTime.now()),
-        ImageJoke(title: '1ted', movie: Movie(id: himym), likes: 23, url: 'himym', dateAdded: DateTime.now()),
-        ImageJoke(title: '2ted', movie: Movie(id: himym), likes: 23, url: 'himym', dateAdded: DateTime.now()),
-        ImageJoke(title: '3ted', movie: Movie(id: himym), likes: 23, url: 'himym', dateAdded: DateTime.now()),
-        ImageJoke(title: '4ted', movie: Movie(id: himym), likes: 23, url: 'himym', dateAdded: DateTime.now()),
-        ImageJoke(title: '1ban', movie: Movie(id: himym), likes: 23, url: 'himym', dateAdded: DateTime.now()),
-        ImageJoke(title: '2ban', movie: Movie(id: himym), likes: 23, url: 'himym', dateAdded: DateTime.now()),
-        ImageJoke(title: '3ban', movie: Movie(id: himym), likes: 23, url: 'himym', dateAdded: DateTime.now()),
-        ImageJoke(title: '4ban', movie: Movie(id: himym), likes: 23, url: 'himym', dateAdded: DateTime.now()),
-        ImageJoke(title: '1rob', movie: Movie(id: himym), likes: 23, url: 'himym', dateAdded: DateTime.now()),
-        ImageJoke(title: '2rob', movie: Movie(id: himym), likes: 23, url: 'himym', dateAdded: DateTime.now()),
+      ImageJoke(
+          title: '1chan',
+          movie: Movie(id: friends),
+          likes: 23,
+          url: 'hello',
+          dateAdded: DateTime.now()),
+      ImageJoke(
+          title: '2chan',
+          movie: Movie(id: friends),
+          likes: 23,
+          url: 'hello',
+          dateAdded: DateTime.now()),
+      ImageJoke(
+          title: '3chan',
+          movie: Movie(id: friends),
+          likes: 23,
+          url: 'hello',
+          dateAdded: DateTime.now()),
+      ImageJoke(
+          title: '4chan',
+          movie: Movie(id: friends),
+          likes: 23,
+          url: 'hello',
+          dateAdded: DateTime.now()),
+      ImageJoke(
+          title: '1ross',
+          movie: Movie(id: friends),
+          likes: 23,
+          url: 'hello',
+          dateAdded: DateTime.now()),
+      ImageJoke(
+          title: '2ross',
+          movie: Movie(id: friends),
+          likes: 23,
+          url: 'hello',
+          dateAdded: DateTime.now()),
+      ImageJoke(
+          title: '3ross',
+          movie: Movie(id: friends),
+          likes: 23,
+          url: 'hello',
+          dateAdded: DateTime.now()),
+      ImageJoke(
+          title: '4ross',
+          movie: Movie(id: friends),
+          likes: 23,
+          url: 'hello',
+          dateAdded: DateTime.now()),
+      ImageJoke(
+          title: '1mon',
+          movie: Movie(id: friends),
+          likes: 23,
+          url: 'hello',
+          dateAdded: DateTime.now()),
+      ImageJoke(
+          title: '2mon',
+          movie: Movie(id: friends),
+          likes: 23,
+          url: 'hello',
+          dateAdded: DateTime.now()),
+      ImageJoke(
+          title: '1ted',
+          movie: Movie(id: himym),
+          likes: 23,
+          url: 'himym',
+          dateAdded: DateTime.now()),
+      ImageJoke(
+          title: '2ted',
+          movie: Movie(id: himym),
+          likes: 23,
+          url: 'himym',
+          dateAdded: DateTime.now()),
+      ImageJoke(
+          title: '3ted',
+          movie: Movie(id: himym),
+          likes: 23,
+          url: 'himym',
+          dateAdded: DateTime.now()),
+      ImageJoke(
+          title: '4ted',
+          movie: Movie(id: himym),
+          likes: 23,
+          url: 'himym',
+          dateAdded: DateTime.now()),
+      ImageJoke(
+          title: '1ban',
+          movie: Movie(id: himym),
+          likes: 23,
+          url: 'himym',
+          dateAdded: DateTime.now()),
+      ImageJoke(
+          title: '2ban',
+          movie: Movie(id: himym),
+          likes: 23,
+          url: 'himym',
+          dateAdded: DateTime.now()),
+      ImageJoke(
+          title: '3ban',
+          movie: Movie(id: himym),
+          likes: 23,
+          url: 'himym',
+          dateAdded: DateTime.now()),
+      ImageJoke(
+          title: '4ban',
+          movie: Movie(id: himym),
+          likes: 23,
+          url: 'himym',
+          dateAdded: DateTime.now()),
+      ImageJoke(
+          title: '1rob',
+          movie: Movie(id: himym),
+          likes: 23,
+          url: 'himym',
+          dateAdded: DateTime.now()),
+      ImageJoke(
+          title: '2rob',
+          movie: Movie(id: himym),
+          likes: 23,
+          url: 'himym',
+          dateAdded: DateTime.now()),
     ];
 
     jokeImageList.forEach((joke) async {
-          Map jokeMap = joke.toMap();
-          jokeMap.remove('id');
-          await Firestore.instance
+      Map jokeMap = joke.toMap();
+      jokeMap.remove('id');
+      await Firestore.instance
           .collection('jokes')
           .document('image_jokes')
           .collection('content')

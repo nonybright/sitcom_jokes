@@ -1,6 +1,6 @@
 import 'package:sitcom_joke_app/models/movie.dart';
 
-class Joke{
+abstract class Joke{
   String id;
   String title;
   int likes;
@@ -8,5 +8,7 @@ class Joke{
   DateTime dateAdded;
 
   Joke({this.id, this.title, this.likes, this.movie, this.dateAdded});
+
+  toMap();
 
 }

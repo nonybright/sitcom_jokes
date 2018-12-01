@@ -5,8 +5,10 @@ import 'package:sitcom_joke_app/bloc/bloc_provider.dart';
 import 'package:sitcom_joke_app/models/joke_type.dart';
 import 'package:sitcom_joke_app/models/movie.dart';
 import 'package:sitcom_joke_app/models/user.dart';
+import 'package:sitcom_joke_app/pages/add_joke_page.dart';
 import 'package:sitcom_joke_app/pages/auth_page.dart';
 import 'package:sitcom_joke_app/pages/movies_list_page.dart';
+import 'package:sitcom_joke_app/widgets/joke_add_dialog.dart';
 
 class AppDrawer extends StatefulWidget {
   final Function(Movie) onMovieClicked;
@@ -48,11 +50,21 @@ class _DrawerState extends State<AppDrawer> {
                 _navigateToPage(null);
               }),
                _drawerTile(Icons.add_comment, 'Add Joke', () {
-                 if(currentUserSnapShot.data != null){
-                    _navigateToPage(null);
-                 }else{
-                   _navigateToPage(AuthPage(AuthType.login));
-                 }
+                //  if(currentUserSnapShot.data != null){
+                //     _navigateToPage(AddJokePage());
+                //  }else{
+                //    _navigateToPage(AuthPage(AuthType.login));
+                //  }
+                // _navigateToPage(AddJokePage(jokeType: JokeType.image,));
+
+                Navigator.pop(context);
+                showDialog(
+                  
+                     context: context,
+                     builder: (context){
+                       return JokeAddDialog();
+                     }
+                );
               }),
               Divider(),
                _drawerTile(Icons.settings, 'Settings', () {
