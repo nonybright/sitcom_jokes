@@ -87,7 +87,7 @@ class _JokeSlidePageState extends State<JokeSlidePage> {
                                       
                                       //use jokesSnapshot.data instead of _currentJoke and for TextJoke too
                                      return ZoomableImage(
-                                     NetworkImage((_currentJoke  as ImageJoke).url),
+                                     NetworkImage((jokeSnapshot.data[index]  as ImageJoke).url),
                                       placeholder: const Center(
                                           child:
                                               const CircularProgressIndicator()),
@@ -100,7 +100,7 @@ class _JokeSlidePageState extends State<JokeSlidePage> {
                                        children: <Widget>[
                                          Padding(
                                            padding: const EdgeInsets.only(top:8.0, left: 8.0, right: 8.0, bottom: 40.0),
-                                           child: Text((_currentJoke as TextJoke).text, textAlign: TextAlign.justify, style: TextStyle(
+                                           child: Text((jokeSnapshot.data[index] as TextJoke).text, textAlign: TextAlign.justify, style: TextStyle(
                                              fontSize: 22.0,
                                            ),),
                                          )
