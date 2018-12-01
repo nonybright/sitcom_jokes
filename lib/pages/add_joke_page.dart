@@ -18,7 +18,8 @@ import 'package:sitcom_joke_app/pages/home_page.dart';
 
 class AddJokePage extends StatefulWidget {
   final JokeType jokeType;
-  AddJokePage({Key key, this.jokeType}) : super(key: key);
+  final Movie selectedMovie;
+  AddJokePage({Key key, this.jokeType, this.selectedMovie}) : super(key: key);
 
   @override
   _AddJokePageState createState() => new _AddJokePageState();
@@ -36,14 +37,11 @@ class _AddJokePageState extends State<AddJokePage> implements BlocCompleter {
   BuildContext _context;
 
   GlobalKey<AutoCompleteTextFieldState<String>> key = new GlobalKey();
-  final TextEditingController _typeAheadController = TextEditingController();
+  final TextEditingController _movieController = TextEditingController();
 
-  Movie _selectedMovie = Movie(
-      id: '9KfSaN86fI4plZHqURmX',
-      name: 'friends',
-      description: 'hello world',
-      seasons: 21,
-      maxEpisodes: 35);
+
+
+  Movie _selectedMovie;
 
   @override
   completed(t) {
@@ -61,6 +59,16 @@ class _AddJokePageState extends State<AddJokePage> implements BlocCompleter {
       content: Text('Error during upload'),
     ));
   }
+
+  @override
+  void initState() {
+      // TODO: implement initState
+      super.initState();
+       _selectedMovie = widget.selectedMovie;
+       if(_selectedMovie != null){
+         _movieController.text = _selectedMovie.name;
+       }
+    }
 
   @override
   Widget build(BuildContext context) {
@@ -203,7 +211,7 @@ class _AddJokePageState extends State<AddJokePage> implements BlocCompleter {
                                 filled: true,
                                 fillColor: Colors.black12,
                               ),
-                              controller: this._typeAheadController,
+                              controller: this._movieController,
                             ),
                             suggestionsCallback: (pattern) {
                               print(pattern);
@@ -221,7 +229,7 @@ class _AddJokePageState extends State<AddJokePage> implements BlocCompleter {
                               return suggestionsBox;
                             },
                             onSuggestionSelected: (suggestion) {
-                              this._typeAheadController.text = suggestion;
+                              this._movieController.text = suggestion;
                               setState(() {
                                 // this._selectedMovie = suggestion;
                               });

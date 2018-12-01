@@ -3,6 +3,7 @@ import 'package:sitcom_joke_app/bloc/bloc_provider.dart';
 import 'package:sitcom_joke_app/bloc/movie_bloc.dart';
 import 'package:sitcom_joke_app/models/joke_type.dart';
 import 'package:sitcom_joke_app/models/movie.dart';
+import 'package:sitcom_joke_app/pages/home_page.dart';
 import 'package:sitcom_joke_app/widgets/scroll_list.dart';
 
 class MoviesListPage extends StatefulWidget {
@@ -59,7 +60,7 @@ _movieCard(Movie movie, MovieBloc movieBloc, context){
            movieBloc.changeSelectedMovie(movie);
            movieBloc.getJokes(JokeType.image);
            movieBloc.getJokes(JokeType.text);
-           Navigator.pop(context);
+           Navigator.push(context, MaterialPageRoute(builder: (context) => HomePage()));
          },
   );
 }

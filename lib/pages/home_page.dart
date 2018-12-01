@@ -3,13 +3,15 @@ import 'package:sitcom_joke_app/bloc/bloc_provider.dart';
 import 'package:sitcom_joke_app/bloc/movie_bloc.dart';
 import 'package:sitcom_joke_app/models/joke_type.dart';
 import 'package:sitcom_joke_app/models/movie.dart';
+import 'package:sitcom_joke_app/pages/add_joke_page.dart';
 import 'package:sitcom_joke_app/pages/movie_details_page.dart';
 import 'package:sitcom_joke_app/widgets/app_drawer.dart';
 import 'package:sitcom_joke_app/widgets/image_list.dart';
 import 'package:sitcom_joke_app/widgets/text_list.dart';
 
 class HomePage extends StatefulWidget {
-  HomePage({Key key}) : super(key: key);
+  final Movie selectedMovie;
+  HomePage({Key key, this.selectedMovie}) : super(key: key);
 
   @override
   _HomePageState createState() => new _HomePageState();
@@ -18,8 +20,6 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage>
     with SingleTickerProviderStateMixin {
   TabController _tabController;
-
-  Movie _selectedMovie;
 
   @override
   void initState() {
@@ -32,17 +32,15 @@ class _HomePageState extends State<HomePage>
   Widget build(BuildContext context) {
     MovieBloc movieBloc = BlocProvider.of(context).movieBloc;
 
-    return Scaffold(
+    return StreamBuilder(
+      initialData: null,
+      stream: movieBloc.selectedMovie,
+      builder: (context, selectedMovieSnapshot){
+
+        Movie selectedMovie = selectedMovieSnapshot.data;
+        return Scaffold(
       
-      drawer:  AppDrawer(onMovieClicked: (movie){
-        print('movie clicked');
-        movieBloc.changeSelectedMovie(movie);
-        movieBloc.getJokes(JokeType.text);
-        movieBloc.getJokes(JokeType.image);
-        setState(() {
-              _selectedMovie = movie;
-        });
-      },),
+      drawer:  AppDrawer(),
       body: DefaultTabController(
         length: 2,
         child: NestedScrollView(
@@ -54,7 +52,7 @@ class _HomePageState extends State<HomePage>
                 pinned: true,
                 flexibleSpace: FlexibleSpaceBar(
                     title: GestureDetector(
-                                          child: Text((_selectedMovie != null)? _selectedMovie.name: "Sitcom Jokes",
+                                          child: Text((selectedMovie != null)? selectedMovie.name: "Sitcom Jokes",
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 16.0,
@@ -101,22 +99,18 @@ class _HomePageState extends State<HomePage>
           ),
         ),
       ),
+      floatingActionButton: FloatingActionButton(
+        child: Icon(Icons.add),
+        onPressed: (){
+                  JokeType jokeType = (_tabController.index == 0)? JokeType.image : JokeType.text;
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => AddJokePage(jokeType: jokeType, selectedMovie: selectedMovie,)));
+            
+        },
+      ),
 );
+      },
+    );
   }
-
-  //   Widget build(BuildContext context) {
-  //   return Scaffold(appBar: AppBar(),
-  //   drawer:  AppDrawer(onMovieClicked: (movie){
-  //       print('movie clicked');
-  //       BlocProvider.of(context).movieBloc.getJokes(1, JokeType.text, movie);
-  //       setState(() {
-  //             _selectedMovie = movie;
-  //       });
-  //     },),
-  //   body:TextList(selectedMovie: _selectedMovie,),
-  //   );
-  // }
-
 }
 
 class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {

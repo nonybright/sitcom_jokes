@@ -11,8 +11,7 @@ import 'package:sitcom_joke_app/pages/movies_list_page.dart';
 import 'package:sitcom_joke_app/widgets/joke_add_dialog.dart';
 
 class AppDrawer extends StatefulWidget {
-  final Function(Movie) onMovieClicked;
-  AppDrawer({Key key, this.onMovieClicked}) : super(key: key);
+  AppDrawer({Key key,}) : super(key: key);
 
   @override
   _DrawerState createState() => new _DrawerState();
