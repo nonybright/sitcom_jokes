@@ -33,7 +33,7 @@ class _HomePageState extends State<HomePage>
     MovieBloc movieBloc = BlocProvider.of(context).movieBloc;
 
     return StreamBuilder(
-      initialData: null,
+      initialData: Movie(id: null),
       stream: movieBloc.selectedMovie,
       builder: (context, selectedMovieSnapshot){
 
@@ -52,7 +52,7 @@ class _HomePageState extends State<HomePage>
                 pinned: true,
                 flexibleSpace: FlexibleSpaceBar(
                     title: GestureDetector(
-                                          child: Text((selectedMovie != null)? selectedMovie.name: "Sitcom Jokes",
+                                          child: Text((selectedMovie.id != null)? selectedMovie.name: "Sitcom Jokes",
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 16.0,

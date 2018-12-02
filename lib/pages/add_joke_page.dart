@@ -10,7 +10,6 @@ import 'package:sitcom_joke_app/models/bloc_completer.dart';
 import 'package:sitcom_joke_app/models/joke_type.dart';
 import 'package:autocomplete_textfield/autocomplete_textfield.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:sitcom_joke_app/models/load_status.dart';
 import 'package:sitcom_joke_app/models/movie.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
@@ -65,7 +64,7 @@ class _AddJokePageState extends State<AddJokePage> implements BlocCompleter {
       // TODO: implement initState
       super.initState();
        _selectedMovie = widget.selectedMovie;
-       if(_selectedMovie != null){
+       if(_selectedMovie != null && _selectedMovie.id != null){
          _movieController.text = _selectedMovie.name;
        }
     }
@@ -96,6 +95,7 @@ class _AddJokePageState extends State<AddJokePage> implements BlocCompleter {
                             decoration: InputDecoration(
                                 filled: true,
                                 fillColor: Colors.black12,
+                                labelText: 'Title',
                                 hintText: 'Title'),
                           ),
 
@@ -208,6 +208,7 @@ class _AddJokePageState extends State<AddJokePage> implements BlocCompleter {
                               },
                               decoration: InputDecoration(
                                 hintText: 'Movie',
+                                labelText: 'Movie',
                                 filled: true,
                                 fillColor: Colors.black12,
                               ),
@@ -356,7 +357,7 @@ class _AddJokePageState extends State<AddJokePage> implements BlocCompleter {
       controller: _textController,
       keyboardType: TextInputType.multiline,
       decoration: InputDecoration(
-          filled: true, fillColor: Colors.black12, hintText: 'Text Joke\n\n\n'),
+          filled: true, fillColor: Colors.black12, hintText: 'Text Joke\n\n\n', labelText: 'Text Joke'),
     );
   }
 }

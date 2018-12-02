@@ -41,7 +41,7 @@ class MovieBloc {
       BehaviorSubject<LoadStatus>(seedValue: LoadStatus.loading);
   final _textLoadStatusSubject =
       BehaviorSubject<LoadStatus>(seedValue: LoadStatus.loading);
-  final _selectedMovieSubject = BehaviorSubject<Movie>(seedValue: null);
+  final _selectedMovieSubject = BehaviorSubject<Movie>(seedValue: Movie(id: null));
   final _searchedMovieResultSubject =
       BehaviorSubject<UnmodifiableListView<Movie>>(
           seedValue: UnmodifiableListView([]));
@@ -170,9 +170,9 @@ class MovieBloc {
 
     _getJokesSubject.stream.withLatestFrom(_selectedMovieSubject.stream,
         (Map map, Movie selectedMovie) {
-      map['movie'] = selectedMovie;
-      return map;
-    }).listen((Map map) {
+          map['movie'] = selectedMovie;
+          return map;
+    }).listen((Map map) { 
       JokeType jokeType = map['jokeType'];
       int currentPage =
           (jokeType == JokeType.image) ? _currentImagePage : _currentTextPage;
@@ -183,7 +183,7 @@ class MovieBloc {
           .collection('jokes')
           .document(jokePath)
           .collection('content')
-          .orderBy('title');
+          .orderBy('title'); //TODO: change order to dateAdded
 
       if (currentPage > 1) {
         jokesQuery = jokesQuery.startAfter((jokeType == JokeType.image)
@@ -194,7 +194,7 @@ class MovieBloc {
         _setLoadStatusSubject(jokeType, LoadStatus.loading);
       }
 
-      if (movie != null) {
+      if (movie.id != null) {
         jokesQuery = jokesQuery.where('movie', isEqualTo: movie.id);
       }
 
