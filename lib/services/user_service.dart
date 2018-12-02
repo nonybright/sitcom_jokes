@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_facebook_login/flutter_facebook_login.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -47,10 +48,10 @@ try{
     accessToken: googleAuth.accessToken,
     idToken: googleAuth.idToken,
   );
-
+await _addUserToStore(user.uid, user.email, user.displayName);
    return User(userId:  user.uid, email: user.email, username: user.displayName,photoUrl:user.photoUrl);
 }catch(error){
-  throw(AppError('Error occured during google authentication'));
+  throw(AppError('Error occured during google authentication')); 
 }
 
 }
@@ -67,15 +68,21 @@ Future<User> signUpWithEmailAndPassword(username, email, password) async {
   updateInfo.photoUrl = '';
   await currentUser.updateProfile(updateInfo);
   assert(user.uid == currentUser.uid);
+  await _addUserToStore(currentUser.uid, currentUser.email, username);
   //return User(userId:  user.uid, email: user.email, username: user.displayName,photoUrl:user.photoUrl);
+  
   return signInWithEmailAndPasword(email, password);
 }
 
 Future<User> signInWithEmailAndPasword(email, password) async {
   final FirebaseUser user =
       await _auth.signInWithEmailAndPassword(email: email, password: password);
-  final FirebaseUser currentUser = await _auth.currentUser();
-  assert(user.uid == currentUser.uid);
+  //final FirebaseUser currentUser = await _auth.currentUser();
   return User(userId:  user.uid, email: user.email, username: user.displayName,photoUrl:user.photoUrl);
+}
+
+
+Future<Null> _addUserToStore(id, email, displayName) async{
+  await Firestore.instance.collection('users').document(id).setData({'email': email, 'displayName': displayName});
 }
 }
