@@ -76,7 +76,7 @@ class _JokeSlidePageState extends State<JokeSlidePage> {
                 body:  StreamBuilder(
                   initialData: null,
                   stream: _userBloc.currentUser,
-                  builder: (context, currentUserSnapShot) {
+                  builder: (contexti, currentUserSnapShot) {
 
                     return Stack(
                   children: <Widget>[
@@ -136,7 +136,7 @@ class _JokeSlidePageState extends State<JokeSlidePage> {
                             bottom: 0.0,
                             left: 0.0,
                             right: 0.0,
-                            child: _jokeOptionsRow((jokeSnapshot.data != null)?jokeSnapshot.data[_currentPageIndex]: null, currentUserSnapShot.data),
+                            child: _jokeOptionsRow((jokeSnapshot.data != null)?jokeSnapshot.data[_currentPageIndex]: null, currentUserSnapShot.data, contexti),
                           )
                         : Container()
                   ],
@@ -158,7 +158,7 @@ class _JokeSlidePageState extends State<JokeSlidePage> {
 
 
 
-_jokeOptionsRow(Joke joke, User currentUser) {
+_jokeOptionsRow(Joke joke, User currentUser, BuildContext context) {
   JokeType jokeType = (joke is TextJoke)? JokeType.text : JokeType.image;
   return Row(
     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -166,7 +166,11 @@ _jokeOptionsRow(Joke joke, User currentUser) {
       _jokeActionBox('Likes', Icons.thumb_up, false, (){}),
       _jokeActionBox('Save', Icons.arrow_downward, false, (){}),
       _jokeActionBox('Favorite', Icons.favorite, (joke != null)?joke.isFaved:false, (){
-         _movieBloc.toggleFavorite(joke.id, jokeType, currentUser);
+         if(currentUser != null){
+           _movieBloc.toggleFavorite(joke.id, jokeType, currentUser);
+         }else{
+           Scaffold.of(context).showSnackBar(SnackBar(content: Text('Login to add Favorites'),));
+         }
       }),
       _jokeActionBox('Share', Icons.share, false, (){}),
     ],

@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:sitcom_joke_app/bloc/bloc_provider.dart';
+import 'package:sitcom_joke_app/bloc/movie_bloc.dart';
 import 'package:sitcom_joke_app/models/TextJoke.dart';
+import 'package:sitcom_joke_app/models/joke_type.dart';
+import 'package:sitcom_joke_app/models/user.dart';
 import 'package:sitcom_joke_app/utils/date_formatter.dart';
 
 
@@ -7,10 +11,12 @@ class TextJokeCard extends StatelessWidget {
 
   TextJoke textJoke;
   Function onTap;
-  TextJokeCard(this.textJoke, this.onTap);
+  User currentUser;
+  TextJokeCard(this.textJoke, this.currentUser, this.onTap);
 
   @override
   Widget build(BuildContext context) {
+     MovieBloc movieBloc = BlocProvider.of(context).movieBloc;
     textJoke.text = 
     'Hello this is the First Joke for me and i am a very long text anf i dont know if i have a break and i can still continue going as long as i can. \n'+
     'This is another line \n and another line \n ad the last';
@@ -65,6 +71,18 @@ class TextJokeCard extends StatelessWidget {
                 )
                   ],
                 ),),
+
+                 IconButton(
+                  icon: Icon(Icons.favorite, color: (textJoke.isFaved)? Colors.orange : Colors.black54,),
+                  onPressed: (){
+                    if(currentUser != null){
+
+                     movieBloc.toggleFavorite(textJoke.id, JokeType.text, currentUser);
+                    }else{
+                      Scaffold.of(context).showSnackBar(SnackBar(content: Text('Login to add Favorites'),));
+                    }
+                  },
+                ),
                  IconButton(
                   icon: Icon(Icons.share, color:  Colors.black54,),
                   onPressed: (){},

@@ -42,7 +42,7 @@ class _TextListState extends State<TextList> {
         movieBloc.getJokes(JokeType.text, currentUserSnapShot.data);
       },
       listItemWidget: (textJoke, index){
-            return TextJokeCard(textJoke, (){
+            return TextJokeCard(textJoke, currentUserSnapShot.data, (){
 
                Navigator.push(context, MaterialPageRoute(builder:(context) => JokeSlidePage(initialPage: index, selectedJoke: textJoke, jokeType: JokeType.text,)));
 

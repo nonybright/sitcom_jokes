@@ -1,19 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:sitcom_joke_app/bloc/bloc_provider.dart';
+import 'package:sitcom_joke_app/bloc/movie_bloc.dart';
 import 'package:sitcom_joke_app/models/ImageJoke.dart';
+import 'package:sitcom_joke_app/models/joke_type.dart';
+import 'package:sitcom_joke_app/models/user.dart';
 import 'package:transparent_image/transparent_image.dart';
 
 class ImageJokeCard extends StatelessWidget {
 
   final ImageJoke imageJoke;
   final Function onTap;
-  ImageJokeCard(this.imageJoke, this.onTap);
+  final User currentUser;
+  ImageJokeCard(this.imageJoke, this.currentUser, this.onTap);
 
   @override
   Widget build(BuildContext context) {
-    return _cardTypeOne(this.onTap);
+
+    MovieBloc movieBloc = BlocProvider.of(context).movieBloc;
+    return _cardTypeOne(this.onTap, movieBloc, context);
   }
 
-  _cardTypeOne(onTap){
+  _cardTypeOne(onTap, MovieBloc movieBloc, context){
 
     return GridTile(
       child: GestureDetector(
@@ -27,7 +34,14 @@ class ImageJokeCard extends StatelessWidget {
       footer: GridTileBar(
         backgroundColor: Colors.black38,
         title: Text(imageJoke.title),
-        trailing: IconButton(icon: Icon(Icons.favorite,), onPressed:  (){},),
+        trailing: IconButton(icon: Icon(Icons.favorite, color: (imageJoke.isFaved)?Colors.orange: Colors.white,), onPressed:  (){
+
+          if(currentUser != null){
+            movieBloc.toggleFavorite(imageJoke.id, JokeType.image, currentUser);
+          }else{
+            Scaffold.of(context).showSnackBar(SnackBar(content: Text('Login to add Favorites'),));
+          }     
+        },),
       ),
       
     );
@@ -58,7 +72,15 @@ class ImageJokeCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: <Widget>[
                   Text(imageJoke.title),
-                  IconButton(icon: Icon(Icons.favorite,), onPressed:  (){},),
+                  IconButton(icon: Icon(Icons.favorite, color: (imageJoke.isFaved)?Colors.orange: Colors.white,), onPressed:  (){
+ //if(currentUser != null){
+
+                    // movieBloc.toggleFavorite(imageJoke.id, JokeType.image, currentUser);
+                    //}else{
+                    //  Scaffold.of(context).showSnackBar(SnackBar(content: Text('Login to add Favorites'),));
+                   // }
+
+                  },),
                 ],
               ),
               ),

@@ -37,7 +37,7 @@ class _ImageListState extends State<ImageList> {
         movieBloc.getJokes(JokeType.image, currentUserSnapShot.data);
       },
       listItemWidget: (imageJoke, index){
-            return ImageJokeCard(imageJoke, (){
+            return ImageJokeCard(imageJoke, currentUserSnapShot.data, (){
               Navigator.push(context, MaterialPageRoute(builder:(context) => JokeSlidePage(initialPage: index, selectedJoke: imageJoke, jokeType: JokeType.image,)));
             });
       },
