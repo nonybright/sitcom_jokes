@@ -3,7 +3,6 @@ import 'dart:collection';
 import 'dart:io';
 
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:sitcom_joke_app/models/ImageJoke.dart';
@@ -13,6 +12,8 @@ import 'package:sitcom_joke_app/models/bloc_completer.dart';
 import 'package:sitcom_joke_app/models/joke_type.dart';
 import 'package:sitcom_joke_app/models/load_status.dart';
 import 'package:sitcom_joke_app/models/movie.dart';
+import 'package:sitcom_joke_app/models/user.dart';
+import 'package:sitcom_joke_app/utils/date_formatter.dart';
 
 class MovieBloc {
   List<Movie> _movies = [];
@@ -50,6 +51,7 @@ class MovieBloc {
   final _uploadJokeSubject = BehaviorSubject<Map>(seedValue: null);
   final _uploadLoadStatusSubject =
       BehaviorSubject<LoadStatus>(seedValue: LoadStatus.loadEnd);
+  final _toggleFavoriteSubject = BehaviorSubject<Map>(seedValue: null);
 
   Stream<UnmodifiableListView<Movie>> get movies => _moviesSubject.stream;
   Stream<LoadStatus> get movieLoadStatus => _movieLoadStatusSubject.stream;
@@ -67,8 +69,10 @@ class MovieBloc {
   //sink
   Function(String) get getMoviesLike =>
       (searchTerm) => _movieTermToSearchSubject.sink.add(searchTerm);
-  void Function(JokeType) get getJokes =>
-      (jokeType) => _getJokesSubject.sink.add({'jokeType': jokeType});
+  void Function(JokeType, User) get getJokes =>
+      (jokeType, currentUser) => _getJokesSubject.sink.add({'jokeType': jokeType, 'currentUser': currentUser});
+
+  Function(String, JokeType, User) get toggleFavorite => (jokeId, jokeType, currentUser) => _toggleFavoriteSubject.sink.add({'jokeId': jokeId, 'jokeType': jokeType, 'currentUser':currentUser});
 
   Function(Movie) get changeSelectedMovie => (movie) {
         _currentImagePage = 1;
@@ -83,6 +87,61 @@ class MovieBloc {
       _uploadJokeSubject.sink.add({'joke': joke, 'image': image, 'completer': completer});
 
   MovieBloc() {
+
+    _toggleFavoriteSubject.stream.listen((options) async {
+
+          String jokeId = options['jokeId'];
+          JokeType jokeType = options['jokeType'];
+          User currentUser = options['currentUser'];
+
+          String jokeFavName;
+          bool removeJoke;
+          int jokeIndex;
+
+      
+
+          if(jokeType == JokeType.text){
+
+            jokeFavName = 'fav_text_joke';
+            jokeIndex = _textJokes.indexWhere((textJokes) => textJokes.id == jokeId);
+            removeJoke = _textJokes[jokeIndex].isFaved;
+          }else{
+            jokeFavName = 'fav_image_joke';
+            jokeIndex = _imageJokes.indexWhere((imageJokes) => imageJokes.id == jokeId);
+            removeJoke = _imageJokes[jokeIndex].isFaved;
+          }
+
+          if(!removeJoke){
+           await Firestore.instance
+            .collection('users')
+            .document(currentUser.userId)
+            .collection(jokeFavName).document(jokeId).setData
+            ({'jokeId': jokeId, 'dateAdded': DateFormatter.dateToString(DateTime.now())}).then((onValue){
+                       if(jokeType == JokeType.text){
+                             _textJokes[jokeIndex].isFaved = !_textJokes[jokeIndex].isFaved;
+                       }else{
+                         _imageJokes[jokeIndex].isFaved = !_imageJokes[jokeIndex].isFaved;
+                       }
+                       _updateJokeSubject(jokeType); 
+            }, onError: (error){
+                    
+            });
+          }else{
+            await Firestore.instance
+            .collection('users')
+            .document(currentUser.userId)
+            .collection(jokeFavName).document(jokeId).delete().then((onValue){
+                       if(jokeType == JokeType.text){
+                             _textJokes[jokeIndex].isFaved = !_textJokes[jokeIndex].isFaved;
+                       }else{
+                         _imageJokes[jokeIndex].isFaved = !_imageJokes[jokeIndex].isFaved;
+                       }
+                       _updateJokeSubject(jokeType); 
+            }, onError: (error){
+
+            });
+          }
+    });
     _uploadJokeSubject.stream.listen((Map uploadDetails) async {
       Joke joke = uploadDetails['joke'];
       Map jokeMap = joke.toMap();
@@ -174,6 +233,7 @@ class MovieBloc {
           return map;
     }).listen((Map map) { 
       JokeType jokeType = map['jokeType'];
+      User currentUser = map['currentUser'];
       int currentPage =
           (jokeType == JokeType.image) ? _currentImagePage : _currentTextPage;
       Movie movie = map['movie'];
@@ -200,8 +260,9 @@ class MovieBloc {
 
       jokesQuery.limit(4).snapshots().listen((jokes) async {
         if (jokes.documents.isNotEmpty) {
+          
           _setLastJoke(jokeType, jokes.documents[jokes.documents.length - 1]);
-          final gottenJokes = _createJokeList(jokes.documents, jokeType, movie);
+          final gottenJokes = await _createJokeList(jokes.documents, jokeType, movie, currentUser);
           if (currentPage == 1) {
             _addJokes(gottenJokes, jokeType);
             _updateJokeSubject(jokeType);
@@ -270,29 +331,75 @@ class MovieBloc {
     }
   }
 
-  _createJokeList(
-      List<DocumentSnapshot> jokeDocuments, JokeType jokeType, Movie movie) {
-    List<dynamic> jokes = jokeDocuments.map((joke) {
+  Future<List<Joke>> _createJokeList(
+      List<DocumentSnapshot> jokeDocuments, JokeType jokeType, Movie movie, User currentUser) async {
+   
+   
+    List<Joke> jokes = jokeDocuments.map((joke){
       Map jokeData = joke.data;
       jokeData['id'] = joke.documentID;
 
       if (movie == null) {
-        // movie = _getMovieFromCache(jokeData['movie']) || _getMovieFromList(jokeData['movie']);
         movie = _getMovieFromCache(jokeData['movie']);
         if (movie == null) {
           movie = _getMovieFromList(jokeData['movie']);
         }
       }
       jokeData['movie'] = movie;
+      jokeData ['isFaved'] = false;
+      return _getJokeFromMap(jokeType, jokeData);
+    }).toList();
 
+    if(currentUser != null){
+      for(int i = 0 ; i < jokes.length ; i++){
+            jokes[i].isFaved = await _isJokeFaved(jokes[i].id, currentUser, jokeType);
+      }
+    }
+    return jokes;
+
+
+    // List<Future<Joke>> jokes = jokeDocuments.map((joke) async{
+    //   Map jokeData = joke.data;
+    //   jokeData['id'] = joke.documentID;
+
+    //   if (movie == null) {
+    //     movie = _getMovieFromCache(jokeData['movie']);
+    //     if (movie == null) {
+    //       movie = _getMovieFromList(jokeData['movie']);
+    //     }
+    //   }
+    //   jokeData['movie'] = movie;
+    //   jokeData ['isFaved'] = (currentUser != null) ? await _isJokeFaved(joke.documentID, currentUser, jokeType) : false;
+    //   return _getJokeFromMap(jokeType, jokeData);
+    // }).toList();
+    // List<Joke> jjk =  await Future.wait(jokes);
+    // return jjk;
+  
+  }
+
+  Future<bool> _isJokeFaved(String jokeId, User currentUser, JokeType jokeType) async{
+
+    String jokeFavName = '';
+       if(jokeType == JokeType.text){
+            jokeFavName = 'fav_text_joke';
+          }else{
+            jokeFavName = 'fav_image_joke';
+          }
+      DocumentSnapshot favSnapshot =  await Firestore.instance
+            .collection('users')
+            .document(currentUser.userId)
+            .collection(jokeFavName).document(jokeId).get();
+      return (favSnapshot.exists) ? true : false;
+  }
+
+
+
+  Joke _getJokeFromMap(JokeType jokeType, Map jokeData){
       if (jokeType == JokeType.image) {
         return ImageJoke.fromMap(jokeData); //TODO: handle if movie is null
       } else {
         return TextJoke.fromMap(jokeData);
       }
-    }).toList();
-
-    return jokes;
   }
 
   _incrementPage(JokeType jokeType) {
@@ -311,18 +418,6 @@ class MovieBloc {
     }
   }
 
-  // _loadAllMovies() {
-  //   Firestore.instance.collection('movies').snapshots().listen((data) {
-  //     List<Movie> movies = data.documents
-  //         .map((doc) => Movie(
-  //             id: doc.documentID,
-  //             name: doc['name'],
-  //             description: doc['description']))
-  //         .toList();
-  //     _movies.addAll(movies);
-  //     _moviesSubject.sink.add(UnmodifiableListView(_movies));
-  //   });
-  // }
 
   _addTextJokesToServer() async {
     String friends = '9KfSaN86fI4plZHqURmX';
@@ -655,31 +750,6 @@ class MovieBloc {
     });
   }
 
-  // _loadJokes(){
-
-  //     final imageJokes =[
-  //         ImageJoke(id:'1', title: 'imgjoke', url: 'aa',movie: Movie(id:'6') ),
-  //         ImageJoke(id:'2', title: 'imgjoke', url: 'bb',movie: Movie(id:'6') ),
-  //         ImageJoke(id:'3', title: 'imgjoke', url: 'cc',movie: Movie(id:'6') ),
-  //         ImageJoke(id:'4', title: 'imgjoke', url: 'dd',movie: Movie(id:'6') ),
-  //     ];
-
-  //     final textJokes = [
-  //           TextJoke(id: '5', text: 'hello'),
-  //           TextJoke(id: '5', text: 'hi'),
-  //           TextJoke(id: '5', text: 'how'),
-  //           TextJoke(id: '5', text: 'are'),
-  //           TextJoke(id: '5', text: 'you'),
-  //     ];
-
-  //     _imageJokes.addAll(imageJokes);
-  //     _textJokes.addAll(textJokes);
-
-  //     _imageJokesSubject.sink.add(UnmodifiableListView(_imageJokes));
-  //     _textJokesSubject.sink.add(UnmodifiableListView(_textJokes));
-
-  // }
-
   close() {
     _moviesSubject.close();
     _imageJokesSubject.close();
@@ -688,5 +758,11 @@ class MovieBloc {
     _imageLoadStatusSubject.close();
     _textLoadStatusSubject.close();
     _selectedMovieSubject.close();
+    _getMoviesSubject.close();
+    _movieLoadStatusSubject.close();
+    _searchedMovieResultSubject.close();
+    _movieTermToSearchSubject.close();
+    _uploadJokeSubject.close();
+    _uploadLoadStatusSubject.close();
   }
 }

@@ -2,11 +2,14 @@ import 'dart:collection';
 
 import 'package:flutter/material.dart';
 import 'package:sitcom_joke_app/bloc/bloc_provider.dart';
+import 'package:sitcom_joke_app/bloc/movie_bloc.dart';
+import 'package:sitcom_joke_app/bloc/user_bloc.dart';
 import 'package:sitcom_joke_app/models/ImageJoke.dart';
 import 'package:sitcom_joke_app/models/Joke.dart';
 import 'package:sitcom_joke_app/models/TextJoke.dart';
 import 'package:sitcom_joke_app/models/joke_type.dart';
 import 'package:sitcom_joke_app/models/load_status.dart';
+import 'package:sitcom_joke_app/models/user.dart';
 import 'package:zoomable_image/zoomable_image.dart';
 
 class JokeSlidePage extends StatefulWidget {
@@ -25,6 +28,10 @@ class _JokeSlidePageState extends State<JokeSlidePage> {
   PageController _pageController;
 
   bool inLoadMore = false;
+  MovieBloc _movieBloc;
+  UserBloc _userBloc;
+
+  int _currentPageIndex;
 
   @override
   void initState() {
@@ -34,16 +41,22 @@ class _JokeSlidePageState extends State<JokeSlidePage> {
     _currentJoke = widget.selectedJoke;
 
     _pageController = PageController(initialPage: widget.initialPage);
-    print(widget.initialPage);
+    _currentPageIndex = widget.initialPage;
   }
 
   @override
   Widget build(BuildContext context) {
-    final movieBloc = BlocProvider.of(context).movieBloc;
+    _movieBloc = BlocProvider.of(context).movieBloc;
+    _userBloc = BlocProvider.of(context).userBloc;
 
-    return StreamBuilder<LoadStatus>(
+    return StreamBuilder(
+        initialData: null,
+        stream: _userBloc.currentUser,
+        builder: (context, currentUserSnapShot) {
+
+          return StreamBuilder<LoadStatus>(
         initialData: LoadStatus.loading,
-        stream: (widget.jokeType == JokeType.image)?movieBloc.imageLoadStatus: movieBloc.textLoadStatus,
+        stream: (widget.jokeType == JokeType.image)?_movieBloc.imageLoadStatus: _movieBloc.textLoadStatus,
         builder: (context, loadSnapshot) {
           if (loadSnapshot.data == LoadStatus.loadedMore ||
               loadSnapshot.data == LoadStatus.loadEnd) {
@@ -52,7 +65,7 @@ class _JokeSlidePageState extends State<JokeSlidePage> {
 
           return StreamBuilder<UnmodifiableListView<Joke>>(
             initialData: null,
-            stream: (widget.jokeType == JokeType.image)?movieBloc.imageJokes: movieBloc.textJokes,
+            stream: (widget.jokeType == JokeType.image)?_movieBloc.imageJokes: _movieBloc.textJokes,
             builder: (context, jokeSnapshot) {
               return Scaffold(
                 backgroundColor: (widget.jokeType == JokeType.image)? Colors.black:null,
@@ -60,7 +73,12 @@ class _JokeSlidePageState extends State<JokeSlidePage> {
                         title: Text(_currentJoke.title),
                       ),
                     
-                body: Stack(
+                body:  StreamBuilder(
+                  initialData: null,
+                  stream: _userBloc.currentUser,
+                  builder: (context, currentUserSnapShot) {
+
+                    return Stack(
                   children: <Widget>[
                     (jokeSnapshot.data != null)
                         ? Padding(
@@ -68,6 +86,7 @@ class _JokeSlidePageState extends State<JokeSlidePage> {
                             child: PageView.builder(
                                 onPageChanged: (index) {
                                   setState(() {
+                                    _currentPageIndex = index;
                                     _currentJoke = jokeSnapshot.data[index];
                                   });
                                 },
@@ -79,7 +98,7 @@ class _JokeSlidePageState extends State<JokeSlidePage> {
                           !inLoadMore &&
                           loadSnapshot.data != LoadStatus.loadEnd) {
                         inLoadMore = true;
-                            movieBloc.getJokes(JokeType.image);
+                            _movieBloc.getJokes(JokeType.image, currentUserSnapShot.data);
                        
                       }
 
@@ -117,32 +136,44 @@ class _JokeSlidePageState extends State<JokeSlidePage> {
                             bottom: 0.0,
                             left: 0.0,
                             right: 0.0,
-                            child: _jokeOptionsRow(),
+                            child: _jokeOptionsRow((jokeSnapshot.data != null)?jokeSnapshot.data[_currentPageIndex]: null, currentUserSnapShot.data),
                           )
                         : Container()
                   ],
-                ),
+                );
+
+                  }),
+                
+                
+                
+                
               );
             },
           );
         });
+
+        });
+    
   }
 
 
 
-_jokeOptionsRow() {
+_jokeOptionsRow(Joke joke, User currentUser) {
+  JokeType jokeType = (joke is TextJoke)? JokeType.text : JokeType.image;
   return Row(
     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
     children: <Widget>[
-      _jokeActionBox('Likes', Icons.thumb_up, false),
-      _jokeActionBox('Save', Icons.arrow_downward, false),
-      _jokeActionBox('Favorite', Icons.favorite, true),
-      _jokeActionBox('Share', Icons.share, false),
+      _jokeActionBox('Likes', Icons.thumb_up, false, (){}),
+      _jokeActionBox('Save', Icons.arrow_downward, false, (){}),
+      _jokeActionBox('Favorite', Icons.favorite, (joke != null)?joke.isFaved:false, (){
+         _movieBloc.toggleFavorite(joke.id, jokeType, currentUser);
+      }),
+      _jokeActionBox('Share', Icons.share, false, (){}),
     ],
   );
 }
 
-_jokeActionBox(String title, IconData icon, bool selected) {
+_jokeActionBox(String title, IconData icon, bool selected, onTap) {
   
   Color iconColor = (widget.jokeType == JokeType.image)? Colors.white : Colors.black;
   Color textColor = (widget.jokeType == JokeType.image)? Colors.grey : Colors.grey;
@@ -168,7 +199,7 @@ _jokeActionBox(String title, IconData icon, bool selected) {
         ],
       ),
     ),
-    onTap: () {},
+    onTap: onTap,
   );
 }
 

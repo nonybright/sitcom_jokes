@@ -35,6 +35,8 @@ dependencies:
   image_picker: ^0.4.10
   firebase_core: ^0.2.5+1
   flutter_typeahead: ^0.4.1
+  sqflite: 0.12.2+1
+
 
 dev_dependencies:
   flutter_test:

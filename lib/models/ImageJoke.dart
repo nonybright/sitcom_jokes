@@ -5,7 +5,7 @@ import 'package:sitcom_joke_app/utils/date_formatter.dart';
 class ImageJoke extends Joke{
 
   String url;
-  ImageJoke({this.url, String id, String title, int likes, Movie movie, DateTime dateAdded}) : super(id:id, title:title, likes:likes, movie:movie, dateAdded:dateAdded );
+  ImageJoke({this.url, String id, String title, int likes, Movie movie, bool isFaved: false, DateTime dateAdded}) : super(id:id, title:title, likes:likes, movie:movie, isFaved: isFaved, dateAdded:dateAdded );
 
 
   ImageJoke.fromMap(Map joke) {
@@ -14,6 +14,7 @@ class ImageJoke extends Joke{
      this.title = joke['title'];
      this.likes = joke['likes'];
      this.url =  joke['url'];
+     this.isFaved = joke['isFaved'];
      this.dateAdded = DateTime.parse(joke['dateAdded']);
      this.movie = joke['movie'];
   }

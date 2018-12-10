@@ -22,16 +22,19 @@ class _ImageListState extends State<ImageList> {
   @override
    Widget build(BuildContext context) {
     final movieBloc = BlocProvider.of(context).movieBloc;
+    final userBloc = BlocProvider.of(context).userBloc;
 
-    
+    return StreamBuilder(
+        initialData: null,
+        stream: userBloc.currentUser,
+        builder: (context, currentUserSnapShot) {
 
-
-    return ScrollList(loadStatusStream: movieBloc.imageLoadStatus,
+          return ScrollList(loadStatusStream: movieBloc.imageLoadStatus,
       listContentStream: movieBloc.imageJokes,
       noItemtext: 'No images To load at the moment',
       scrollListType: ScrollListType.grid,
       loadMoreAction: (){
-        movieBloc.getJokes(JokeType.image);
+        movieBloc.getJokes(JokeType.image, currentUserSnapShot.data);
       },
       listItemWidget: (imageJoke, index){
             return ImageJokeCard(imageJoke, (){
@@ -39,6 +42,7 @@ class _ImageListState extends State<ImageList> {
             });
       },
     );
-  }
+  });
  
+}
 }

@@ -248,10 +248,12 @@ class _AddJokePageState extends State<AddJokePage> implements BlocCompleter {
         ? Row(
             children: <Widget>[
               _dropDownBox(
+
                   items: List.generate(
                       _selectedMovie.seasons, (index) => index + 1),
                   value: _selectedSeason,
                   hint: 'Season',
+
                   onChanged: (season) {
                     setState(() {
                       _selectedSeason = season;
@@ -303,6 +305,7 @@ class _AddJokePageState extends State<AddJokePage> implements BlocCompleter {
         padding: const EdgeInsets.only(left: 12.0),
         child: DropdownButtonHideUnderline(
           child: DropdownButton<dynamic>(
+            
             hint: Text(hint),
             value: value,
             items: items.map((dynamic value) {

@@ -6,7 +6,7 @@ class TextJoke extends Joke{
 
   String text;
 
-  TextJoke({this.text, String id, String title, int likes, Movie movie, DateTime dateAdded}) : super(id:id, title:title, likes:likes, movie:movie, dateAdded:dateAdded );
+  TextJoke({this.text, String id, String title, int likes, Movie movie, bool isFaved: false, DateTime dateAdded}) : super(id:id, title:title, likes:likes, movie:movie, dateAdded:dateAdded );
 
 
   TextJoke.fromMap(Map joke) {
@@ -15,6 +15,7 @@ class TextJoke extends Joke{
      this.title = joke['title'];
      this.likes = joke['likes'];
      this.text =  joke['text'];
+     this.isFaved = joke['isFaved'];
      this.dateAdded = DateTime.parse(joke['dateAdded']);
      this.movie = joke['movie'];
   }

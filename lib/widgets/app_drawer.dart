@@ -35,8 +35,8 @@ class _DrawerState extends State<AppDrawer> {
               _drawerHeader(currentUserSnapShot.data),
               _drawerTile(Icons.cloud, 'Latest Updates', () {
                 movieBloc.changeSelectedMovie(Movie(id : null));
-                movieBloc.getJokes(JokeType.text); 
-                movieBloc.getJokes(JokeType.image); 
+                movieBloc.getJokes(JokeType.text, currentUserSnapShot.data); 
+                movieBloc.getJokes(JokeType.image, currentUserSnapShot.data); 
                 Navigator.pop(context);
                 //_navigateToPage(null);
               }),

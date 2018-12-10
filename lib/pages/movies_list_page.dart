@@ -3,6 +3,7 @@ import 'package:sitcom_joke_app/bloc/bloc_provider.dart';
 import 'package:sitcom_joke_app/bloc/movie_bloc.dart';
 import 'package:sitcom_joke_app/models/joke_type.dart';
 import 'package:sitcom_joke_app/models/movie.dart';
+import 'package:sitcom_joke_app/models/user.dart';
 import 'package:sitcom_joke_app/pages/home_page.dart';
 import 'package:sitcom_joke_app/widgets/scroll_list.dart';
 
@@ -15,13 +16,10 @@ class MoviesListPage extends StatefulWidget {
 
 class _MoviesListPageState extends State<MoviesListPage> {
 
-
-  
-
-
   @override
   Widget build(BuildContext context) {
     final movieBloc = BlocProvider.of(context).movieBloc;
+    final userBloc = BlocProvider.of(context).userBloc;
 
     return Scaffold(
       appBar: AppBar(title: Text('Sitcoms'), actions: <Widget>[
@@ -31,7 +29,13 @@ class _MoviesListPageState extends State<MoviesListPage> {
         )
       ],),
 
-      body: ScrollList(
+      body: StreamBuilder(
+        initialData: null,
+        stream: userBloc.currentUser,
+        builder: (context, currentUserSnapShot) {
+
+
+          return ScrollList(
         noItemtext: 'No movies to view at the moment',
         listContentStream: movieBloc.movies,
         loadStatusStream: movieBloc.movieLoadStatus,
@@ -40,15 +44,20 @@ class _MoviesListPageState extends State<MoviesListPage> {
             //
         },
         listItemWidget: (movie, index){
-             return _movieCard(movie, movieBloc, context);
+             return _movieCard(movie, movieBloc, currentUserSnapShot.data, context);
         },
-      ),
+      );
+
+        }),
+      
+      
+      
     );
   }
 }
 
 
-_movieCard(Movie movie, MovieBloc movieBloc, context){
+_movieCard(Movie movie, MovieBloc movieBloc, User currentUser,  context){
   return ListTile(
          leading: CircleAvatar(
            //backgroundImage: NetworkImage(movie.icon),
@@ -58,8 +67,8 @@ _movieCard(Movie movie, MovieBloc movieBloc, context){
          subtitle: Text('seasons '+ movie.seasons.toString()),
          onTap: (){
            movieBloc.changeSelectedMovie(movie);
-           movieBloc.getJokes(JokeType.image);
-           movieBloc.getJokes(JokeType.text);
+           movieBloc.getJokes(JokeType.image, currentUser);
+           movieBloc.getJokes(JokeType.text, currentUser);
            Navigator.push(context, MaterialPageRoute(builder: (context) => HomePage()));
          },
   );

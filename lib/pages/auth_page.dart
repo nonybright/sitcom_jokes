@@ -4,10 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:sitcom_joke_app/bloc/auth_bloc.dart';
 import 'package:sitcom_joke_app/bloc/bloc_provider.dart';
-import 'package:sitcom_joke_app/main.dart';
 import 'package:sitcom_joke_app/models/auth.dart';
 import 'package:sitcom_joke_app/models/bloc_completer.dart';
-import 'package:sitcom_joke_app/models/error.dart';
 import 'package:sitcom_joke_app/models/load_status.dart';
 import 'package:sitcom_joke_app/models/user.dart';
 import 'package:sitcom_joke_app/pages/home_page.dart';
@@ -15,7 +13,6 @@ import 'package:sitcom_joke_app/services/user_service.dart';
 import 'package:sitcom_joke_app/utils/validator.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:flutter_facebook_login/flutter_facebook_login.dart';
 
 enum AuthType { login, signup }
 
@@ -36,8 +33,8 @@ class _AuthPageState extends State<AuthPage> implements BlocCompleter<User> {
   final _formKey = GlobalKey<FormState>();
 
 
-  TextEditingController _usernameController = TextEditingController(text:'nonybrighto');
-  TextEditingController _emailController = TextEditingController(text: 'hiddennony@gmail.com');
+  TextEditingController _usernameController = TextEditingController(text:'nony');
+  TextEditingController _emailController = TextEditingController(text: 'nony@gmail.com');
   TextEditingController _passwordController = TextEditingController(text: 'tested69#');
 
   @override
@@ -45,6 +42,8 @@ class _AuthPageState extends State<AuthPage> implements BlocCompleter<User> {
     // TODO: implement initState
     super.initState();
     validator = Validator();
+
+     List<bool> val =  List<bool>.generate(100, (val) => true);
   }
 
   @override

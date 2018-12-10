@@ -27,12 +27,19 @@ class _TextListState extends State<TextList> {
   @override
   Widget build(BuildContext context) {
     final movieBloc = BlocProvider.of(context).movieBloc;
-    return ScrollList(loadStatusStream: movieBloc.textLoadStatus,
+     final userBloc = BlocProvider.of(context).userBloc;
+
+    return StreamBuilder(
+        initialData: null,
+        stream: userBloc.currentUser,
+        builder: (context, currentUserSnapShot) {
+
+          return ScrollList(loadStatusStream: movieBloc.textLoadStatus,
       listContentStream: movieBloc.textJokes,
       noItemtext: 'No text To load at the moment',
       scrollListType:  ScrollListType.list,
       loadMoreAction: (){
-        movieBloc.getJokes(JokeType.text);
+        movieBloc.getJokes(JokeType.text, currentUserSnapShot.data);
       },
       listItemWidget: (textJoke, index){
             return TextJokeCard(textJoke, (){
@@ -42,5 +49,10 @@ class _TextListState extends State<TextList> {
             });
       },
     );
+
+        });
+
+
+    
   }
 }
