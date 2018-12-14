@@ -1,11 +1,8 @@
-import 'dart:collection';
-
 import 'package:flutter/material.dart';
 import 'package:sitcom_joke_app/bloc/bloc_provider.dart';
 import 'package:sitcom_joke_app/models/joke_type.dart';
 import 'package:sitcom_joke_app/models/movie.dart';
 import 'package:sitcom_joke_app/models/user.dart';
-import 'package:sitcom_joke_app/pages/add_joke_page.dart';
 import 'package:sitcom_joke_app/pages/auth_page.dart';
 import 'package:sitcom_joke_app/pages/movies_list_page.dart';
 import 'package:sitcom_joke_app/widgets/joke_add_dialog.dart';
@@ -46,7 +43,14 @@ class _DrawerState extends State<AppDrawer> {
 
               }),
               _drawerTile(Icons.favorite, 'Favorites', () {
-                _navigateToPage(null);
+
+                Navigator.pop(context);
+                movieBloc.getFav(true);
+                movieBloc.changeSelectedMovie(Movie(id: null));
+                movieBloc.getJokes(JokeType.text, currentUserSnapShot.data); 
+                movieBloc.getJokes(JokeType.image, currentUserSnapShot.data); 
+                Navigator.pop(context);
+
               }),
                _drawerTile(Icons.add_comment, 'Add Joke', () {
                 //  if(currentUserSnapShot.data != null){

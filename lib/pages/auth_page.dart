@@ -11,13 +11,9 @@ import 'package:sitcom_joke_app/models/user.dart';
 import 'package:sitcom_joke_app/pages/home_page.dart';
 import 'package:sitcom_joke_app/services/user_service.dart';
 import 'package:sitcom_joke_app/utils/validator.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 
 enum AuthType { login, signup }
 
-final FirebaseAuth _auth = FirebaseAuth.instance;
-final GoogleSignIn _googleSignIn = GoogleSignIn();
 
 class AuthPage extends StatefulWidget {
   final AuthType authType;
@@ -34,8 +30,8 @@ class _AuthPageState extends State<AuthPage> implements BlocCompleter<User> {
 
 
   TextEditingController _usernameController = TextEditingController(text:'nony');
-  TextEditingController _emailController = TextEditingController(text: 'nony@gmail.com');
-  TextEditingController _passwordController = TextEditingController(text: 'tested69#');
+  TextEditingController _emailController = TextEditingController(text: 'example@gmail.com');
+  TextEditingController _passwordController = TextEditingController(text: 'password');
 
   @override
   void initState() {
